@@ -18,7 +18,7 @@ pub mod expressive_physics {
 			UnexpectedOperator,
 			TooManyDots,
 			InvalidCharacter,
-			InternalError (String)
+			InternalError(String)
 		}
 
 		#[derive(Debug)]
