@@ -1,9 +1,9 @@
 //! Expressive Physics
 //! Expressive Physics is (will be) a welcoming sandbox app for aspiring physicists !
 
-mod parsing;
+mod model;
 
-use parsing::expressive_physics::parser::*;
+use model::tokening::*;
 
 fn main() {
     println!("___________Expressive Physics______________");
