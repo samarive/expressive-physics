@@ -1,4 +1,3 @@
-//! Expressive Physics
 //! Expressive Physics is (will be) a welcoming sandbox app for aspiring physicists !
 
 mod model;
