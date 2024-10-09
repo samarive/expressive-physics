@@ -4,6 +4,8 @@ use common_macros::hash_map;
 use super::tokening::{Token, Tokenizer};
 use super::parsing::Parser;
 
+pub type World = Vec::<Point>;
+
 pub struct Force {
 	x: Vec::<Token>,
 	y: Vec::<Token>
