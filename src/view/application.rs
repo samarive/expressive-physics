@@ -8,7 +8,7 @@ pub struct Application {
 	world: Rc::<RefCell::<World>>,
 	rl_handle: RaylibHandle,
 	rl_thread: RaylibThread,
-	widget_root: Widget<Frame>
+	widget_root: Widget
 }
 
 impl Application {
@@ -22,10 +22,10 @@ impl Application {
 			world: Rc::clone(w),
 			rl_handle,
 			rl_thread,
-			widget_root: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), Frame {outline_width: 0f32})
+			widget_root: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)))
 		};
 
-		r.widget_root.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), &Label {text: "Default".to_string()}));
+		r.widget_root.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32))));
 
 		r
 	}

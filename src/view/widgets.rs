@@ -1,3 +1,7 @@
+//! Contient le nécessaire pour construire des interfaces graphiques simplement.
+//! [ATTENTION]
+//! Ce fichier est actuellement invalide !
+
 use raylib::prelude::*;
 
 
@@ -19,43 +23,53 @@ pub struct Style {
 	foreground: Color
 }
 
-trait WidgetVariant {
-	fn handle_events(&mut self, bounding_box: &Layout, handle: &RaylibHandle) {}
-	fn draw(&self, bounding_box: &Layout, style: &Style, handle: &mut RaylibDrawHandle);
-}
 
-pub struct Label {
-	text: String
-}
-pub struct Frame {
-	outline_width: f32
-}
-impl WidgetVariant for Label {
-	fn draw(&self, bounding_box: &Layout, style: &Style, handle: &mut RaylibDrawHandle) {
-		handle.draw_rectangle_v(bounding_box.center - bounding_box.size / 2f32, bounding_box.size, style.background);
-		handle.draw_text(&self.text, bounding_box.center.x as i32 - bounding_box.size.x as i32/2i32, bounding_box.center.y as i32 + bounding_box.size.y as i32/2i32, 16i32, style.foreground);
-	}
-}
-impl WidgetVariant for Frame {
-	fn draw(&self, bounding_box: &Layout, style: &Style, handle: &mut RaylibDrawHandle) {
-		handle.draw_rectangle_v(bounding_box.center - bounding_box.size / 2f32, bounding_box.size, style.background);
-		handle.draw_rectangle_v(bounding_box.center - bounding_box.size / 2f32 + Vector2::new(self.outline_width, self.outline_width), bounding_box.size - Vector2::new(self.outline_width, self.outline_width) * 2f32, style.foreground);
-	}
-}
-
-
-pub struct Widget<T: WidgetVariant> {
+/// Représente un élément de l'interface graphique utilisateur (bouton, text, champ d'entrée, etc.)
+///
+/// [Example]
+/// ```
+///	use raylib::prelude::*;
+///
+///	fn main() {
+///		let mut frame = Widget::new(
+///			Layout::new(
+///				Vector2::new(0f32, 0f32),
+///				Vector2::new(0.9f32, 0.9f32)
+///			),
+///			&Frame {outline_width = 16f32}
+///		);
+///		frame.add_child(
+///			Widget::new(
+///				Layout::new(
+///					Vector2::new(0f32, 0f32),
+///					Vector2::new(0.8f32, 0.3f32)
+///				)
+///			),
+///			Label {text: "Hello World!".to_string()}
+///		);
+///
+///		let (rl, thread) = raylib::init().size(800, 450).build();
+///		rl.set_target_fps(60);
+///
+///		while !rl.window_should_close() {
+///			let mut d = rl.begin_drawing(&thread);
+///			frame.draw_tree(
+///				&Layout::new(Vector2::new(0f32, 0f32), Vector2::new(800f32, 450f32)),
+///				&d
+///			);
+///		}
+///	}
+/// ```
+pub struct Widget {
 	layout: Layout,
-	variant: Box::<T>,
-	children: Vec::<Box::<T>>
+	children: Vec::<Box::<Widget>>
 }
 
-impl <T: WidgetVariant>Widget<T> {
-	pub fn new(layout: Layout, variant: T) -> Widget<T>{
+impl Widget {
+	pub fn new(layout: Layout) -> Widget{
 		Widget {
 			layout,
-			variant: Box::new(variant),
-			children: Vec::<Box::<T>>::new()
+			children: Vec::<Box::<Widget>>::new()
 		}
 	}
 
@@ -72,15 +86,14 @@ impl <T: WidgetVariant>Widget<T> {
 			)
 		);
 
-		// rl_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size, self.color);
-		self.variant.draw(&true_coords, &Style {background: Color::GREEN, foreground: Color::BLUE}, &mut rl_handle);
+		rl_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size, Color::BLUE);
 
 		for child in self.children.iter() {
 			child.draw_tree(&true_coords, rl_handle);
 		}
 	}
 
-	pub fn add_child(&mut self, w: Widget<T>) {
+	pub fn add_child(&mut self, w: Widget) {
 		self.children.push(Box::new(w));
 	}
 }
