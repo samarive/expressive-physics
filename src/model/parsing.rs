@@ -75,14 +75,8 @@ impl Parser {
 					}
 				}
 				
-				let contains_value: &Token; // Points to the token that contains the value or the variable
-				
-				if token_then_only_prths {
-					contains_value = &tokens[start];
-				}
-				else {
-					contains_value = &tokens[end-1];
-				}
+				// Points to the token that contains the value or the variable
+				let contains_value = if token_then_only_prths {&tokens[start]} else {&tokens[end-1]};
 
 				// Unboxing the value
 				match contains_value {
@@ -100,7 +94,7 @@ impl Parser {
 		}
 	}
 
-	fn find_least_prior_operator(tokens: &Vec::<Token>, start: usize, end: usize) -> Result<OperatorPosition, ParsingError> {
+	fn find_least_prior_operator(tokens: &[Token], start: usize, end: usize) -> Result<OperatorPosition, ParsingError> {
 
 		// The higher the number, the higher the priority
 		let mut priorities = HashMap::<char, i32>::new();

@@ -11,18 +11,15 @@ mod view;
 
 use model::physics::*;
 use view::application::Application;
-use std::rc::Rc;
-use std::cell::RefCell;
 use raylib::math::Vector2;
-
 
 
 fn main() {
 
-    let world = Rc::new(RefCell::new(World::new()));
-    world.borrow_mut().push(Point::new(Vector2::new(200f32, 200f32)));
+    let mut world = World::new();
+    world.push(Point::new(Vector2::new(400f32, 225f32)));
 
-    let mut app = Application::realize(&world);
+    let mut app = Application::realize(world);
 
     app.mainloop();
 

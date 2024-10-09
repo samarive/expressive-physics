@@ -1,7 +1,7 @@
 use raylib::math::Vector2;
 use std::collections::HashMap;
 use common_macros::hash_map;
-use super::tokening::{Token, Tokenizer};
+use super::tokening::Token;
 use super::parsing::Parser;
 
 pub type World = Vec::<Point>;
@@ -55,25 +55,25 @@ impl Point {
 		self.speed += self.acceleration;
 	}
 
-	pub fn add_force(&mut self, name: &String, force: Force) -> Result<(), String> {
+	pub fn add_force(&mut self, name: &str, force: Force) -> Result<(), String> {
 		if Self::only_contains_valid_variables(&force.x) && Self::only_contains_valid_variables(&force.y) {
-			self.forces.insert(name.clone(), force);
+			self.forces.insert(name.to_string(), force);
 			Ok(())
 		}
 		else {
-			Err(format!("Invalid variable in force expression."))
+			Err("Invalid variable in force expression.".to_string())
 		}
 	}
 
 	fn only_contains_valid_variables(tokens: &Vec::<Token>) -> bool {
-		const accepted_variables:[&str; 6]  = ["px", "py", "vx", "vy", "ax", "ay"];
+		const ACCEPTED_VARIABLES:[&str; 6]  = ["px", "py", "vx", "vy", "ax", "ay"];
 		for token in tokens {
 			if let Token::Variable(name) = token {
-				if !accepted_variables.contains(&name.as_str()) {
+				if !ACCEPTED_VARIABLES.contains(&name.as_str()) {
 					return false;
 				}
 			}
 		}
-		return true;
+		true
 	}
 }

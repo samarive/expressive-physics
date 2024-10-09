@@ -1,10 +1,6 @@
 //! Contient le nécessaire pour construire des interfaces graphiques simplement.
-//! # ATTENTION
-//! Ce fichier n'est pas encore utilisable !
 
 use raylib::prelude::*;
-use std::cell::RefCell;
-use std::rc::Rc;
 
 pub struct Layout {
 	center: Vector2,
@@ -40,7 +36,7 @@ pub enum WidgetVariant {
 
 /// Représente un élément de l'interface graphique utilisateur (bouton, text, champ d'entrée, etc.)
 ///
-/// [Example]
+/// # Exemple
 /// ```
 /// use raylib::prelude::*;
 /// use view::widgets::*;
@@ -59,20 +55,20 @@ pub enum WidgetVariant {
 ///                 Vector2::new(0f32, 0f32),
 ///                 Vector2::new(0.8f32, 0.3f32)
 ///             ),
-///				WidgetVariant::Label {text: "Hello World!".to_string(), font_size: 16i32}
+///             WidgetVariant::Label {text: "Hello World!".to_string(), font_size: 16i32}
 ///         )
 ///     );
 ///
-///		let widget_layout = Layout::new(Vector2::new(400f32, 225f32), Vector2::new(800f32, 450f32));
+///     let widget_layout = Layout::new(Vector2::new(400f32, 225f32), Vector2::new(800f32, 450f32));
 ///
 ///     let (mut rl, thread) = raylib::init().size(800, 450).build();
 ///     rl.set_target_fps(60);
 ///
 ///     while !rl.window_should_close() {
 ///         w.check_event_in_tree(&widget_layout, &mut rl);
-///			let mut d = rl.begin_drawing(&thread);
+///	        let mut d = rl.begin_drawing(&thread);
 ///         d.clear_background(Color::RED);
-///			w.draw_tree(
+///         w.draw_tree(
 ///             &widget_layout,
 ///             &mut d
 ///         );
@@ -83,7 +79,7 @@ pub struct Widget {
 	layout: Layout,
 	variant: WidgetVariant,
 	style: Style,
-	children: Vec::<Box::<Widget>>
+	children: Vec::<Widget>
 }
 
 impl Widget {
@@ -92,7 +88,7 @@ impl Widget {
 			layout,
 			variant,
 			style: Style::default(),
-			children: Vec::<Box::<Widget>>::new()
+			children: Vec::<Widget>::new()
 		}
 	}
 	pub fn style(mut self, style: Style) -> Self {
@@ -149,7 +145,7 @@ impl Widget {
 			},
 			WidgetVariant::Label {text, font_size} => {
 				draw_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size, self.style.background);
-				draw_handle.draw_text(&text, true_coords.center.x as i32 - (true_coords.size.x*0.9f32) as i32/2i32, true_coords.center.y as i32 - font_size/2i32, *font_size, self.style.foreground);
+				draw_handle.draw_text(text, true_coords.center.x as i32 - (true_coords.size.x*0.9f32) as i32/2i32, true_coords.center.y as i32 - font_size/2i32, *font_size, self.style.foreground);
 			}
 		}
 
@@ -159,6 +155,6 @@ impl Widget {
 	}
 
 	pub fn add_child(&mut self, w: Widget) {
-		self.children.push(Box::new(w));
+		self.children.push(w);
 	}
 }
