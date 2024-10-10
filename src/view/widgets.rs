@@ -2,9 +2,10 @@
 
 use raylib::prelude::*;
 
+#[derive(Debug)]
 pub struct Layout {
-	center: Vector2,
-	size: Vector2
+	pub center: Vector2,
+	pub size: Vector2
 }
 impl Layout {
 	pub fn new(center: Vector2, size: Vector2) -> Self {
@@ -13,7 +14,16 @@ impl Layout {
 			size
 		}
 	}
+
+	pub fn contains(&self, point: Vector2) -> bool {
+		return point.x >= self.center.x - self.size.x / 2f32
+		    && point.x <= self.center.x + self.size.x / 2f32
+		    && point.y >= self.center.y - self.size.y / 2f32
+		    && point.y <= self.center.y + self.size.y / 2f32
+	}
 }
+
+
 
 pub struct Style {
 	pub background: Color,
@@ -25,6 +35,16 @@ impl Style {
 			background: Color::WHITE,
 			foreground: Color::BLACK
 		}
+	}
+
+	pub fn background(mut self, c: Color) -> Self {
+		self.background = c;
+		self
+	}
+
+	pub fn foreground(mut self, c: Color) -> Self {
+		self.foreground = c;
+		self
 	}
 }
 
@@ -79,7 +99,8 @@ pub struct Widget {
 	layout: Layout,
 	variant: WidgetVariant,
 	style: Style,
-	children: Vec::<Widget>
+	children: Vec::<Widget>,
+	hidden: bool
 }
 
 impl Widget {
@@ -88,7 +109,8 @@ impl Widget {
 			layout,
 			variant,
 			style: Style::default(),
-			children: Vec::<Widget>::new()
+			children: Vec::<Widget>::new(),
+			hidden: false
 		}
 	}
 	pub fn style(mut self, style: Style) -> Self {
@@ -96,7 +118,21 @@ impl Widget {
 		self
 	} 
 
+	pub fn toggle(&mut self) {
+		self.hidden = !self.hidden;
+	}
+
+	pub fn hidden(mut self) -> Self{
+		self.set_visible(false);
+		self
+	}
+	pub fn set_visible(&mut self, a: bool) {
+		self.hidden = !a;
+	}
+
 	pub fn check_event_in_tree(&mut self, parent_layout: &Layout, rl: &mut RaylibHandle) {
+		if self.hidden {return;}
+
 		let true_coords = Layout::new(
 			Vector2::new(
 				parent_layout.center.x + self.layout.center.x * parent_layout.size.x,
@@ -111,10 +147,10 @@ impl Widget {
 		match &self.variant {
 			WidgetVariant::Label {text, ..} => {
 				let mouse = rl.get_mouse_position();
-				if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && mouse.x > true_coords.center.x - true_coords.size.x/2f32 && mouse.x < true_coords.center.x + true_coords.size.x/2f32
-				&& mouse.y > true_coords.center.y - true_coords.size.y/2f32 && mouse.y < true_coords.center.y + true_coords.size.y/2f32 {
+				if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && true_coords.contains(mouse){
 					println!("Label '{text}' clicked !");
 				}
+				
 			},
 			_ => {}
 		}
@@ -125,6 +161,7 @@ impl Widget {
 	}
 
 	pub fn draw_tree(&self, parent_layout: &Layout, draw_handle: &mut RaylibDrawHandle) {
+		if self.hidden {return;}
 		let true_coords = Layout::new(
 			Vector2::new(
 				parent_layout.center.x + self.layout.center.x * parent_layout.size.x,
