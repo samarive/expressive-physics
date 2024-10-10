@@ -23,6 +23,7 @@ its documentation.
 # What to do ?
 
 * UI
+	1. Stop input fields from everflowing when the user types a long string
 	1. Make buttons and input fields actually do something when activated
 	1. Show the list of points at the left of the screen
 		* make it scrollable.
