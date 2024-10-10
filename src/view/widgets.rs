@@ -27,13 +27,15 @@ impl Layout {
 
 pub struct Style {
 	pub background: Color,
-	pub foreground: Color
+	pub foreground: Color,
+	pub action: Color
 }
 impl Style {
 	pub fn default() -> Self {
 		Style {
 			background: Color::WHITE,
-			foreground: Color::BLACK
+			foreground: Color::BLACK,
+			action: Color::GRAY
 		}
 	}
 
@@ -46,11 +48,25 @@ impl Style {
 		self.foreground = c;
 		self
 	}
+
+	pub fn action(mut self, c: Color) -> Self {
+		self.action = c;
+		self
+	}
+}
+
+#[derive(Debug)]
+pub enum ButtonState {
+	Rest,
+	Hovered,
+	Activated {countdown: i32}
 }
 
 pub enum WidgetVariant {
 	Frame {outline_thickness: f32},
-	Label {text: String, font_size: i32}
+	Label {text: String, font_size: i32},
+	Button {state: ButtonState},
+	TextInput {selected: bool, placeholder: String, text: String}
 }
 
 
@@ -144,14 +160,58 @@ impl Widget {
 			)
 		);
 
-		match &self.variant {
+		let mouse = rl.get_mouse_position();
+		match &mut self.variant {
 			WidgetVariant::Label {text, ..} => {
-				let mouse = rl.get_mouse_position();
 				if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && true_coords.contains(mouse){
 					println!("Label '{text}' clicked !");
 				}
-				
 			},
+			WidgetVariant::Button {state} => {
+				if true_coords.contains(mouse) {
+					if let ButtonState::Rest = *state {
+						*state = ButtonState::Hovered;
+					}
+					if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
+						*state = ButtonState::Activated {countdown: 8i32};
+						println!("Button clicked");
+					}
+				}
+				else {
+					if let ButtonState::Hovered = *state {
+						*state = ButtonState::Rest;
+					}
+				}
+
+				if let ButtonState::Activated{countdown} = state {
+					*countdown -= 1;
+					if *countdown <= 0 {
+						*state = ButtonState::Hovered;
+					}
+				}
+
+			},
+			WidgetVariant::TextInput {selected, text, ..} => {
+				if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && true_coords.contains(mouse) {
+					*selected = true;
+				}
+				else if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
+					*selected = false;
+				}
+
+				if *selected {
+					match rl.get_char_pressed() {
+						Some(c) => text.push(c),
+						None => if let Some(key) = rl.get_key_pressed() {
+							match key {
+								KeyboardKey::KEY_BACKSPACE => {text.pop();},
+								KeyboardKey::KEY_ENTER => {*selected = false;}
+								_ => {}
+							}
+						}
+					}
+				}
+			}
 			_ => {}
 		}
 
@@ -173,16 +233,56 @@ impl Widget {
 			)
 		);
 
+		let coords_rect = Rectangle::new(
+			true_coords.center.x - true_coords.size.x / 2f32,
+			true_coords.center.y - true_coords.size.y / 2f32,
+			true_coords.size.x,
+			true_coords.size.y
+		);
+
 		match &self.variant {
 			WidgetVariant::Frame {outline_thickness} => {
 				let outline = Vector2::new(*outline_thickness, *outline_thickness);
 
-				draw_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size, self.style.background);
-				draw_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32 + outline, true_coords.size - outline * 2f32, self.style.foreground);
+				draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
+				draw_handle.draw_rectangle_v(
+					Vector2::new(coords_rect.x, coords_rect.y) + outline, true_coords.size - outline * 2f32,
+					self.style.foreground
+				);
 			},
 			WidgetVariant::Label {text, font_size} => {
-				draw_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size, self.style.background);
-				draw_handle.draw_text(text, true_coords.center.x as i32 - (true_coords.size.x*0.9f32) as i32/2i32, true_coords.center.y as i32 - font_size/2i32, *font_size, self.style.foreground);
+				draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
+				draw_handle.draw_text(
+					text,
+					true_coords.center.x as i32 - (true_coords.size.x*0.9f32) as i32/2i32,
+					true_coords.center.y as i32 - font_size/2i32, *font_size,
+					self.style.foreground
+				);
+			},
+			WidgetVariant::Button {state} => {
+				draw_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size,
+					match state {
+						ButtonState::Activated{..} => self.style.foreground,
+						ButtonState::Hovered => self.style.action,
+						ButtonState::Rest => self.style.background
+					}
+				);
+			}
+			WidgetVariant::TextInput {selected, placeholder, text} => {
+				draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
+				draw_handle.draw_text(
+					if text.is_empty() {placeholder} else {text},
+					coords_rect.x as i32 + (0.05 * coords_rect.width as f32) as i32, coords_rect.y as i32,
+					coords_rect.height as i32,
+					if text.is_empty() {self.style.action} else {self.style.foreground}
+				);
+				
+				draw_handle.draw_rectangle_lines(
+					coords_rect.x as i32, coords_rect.y as i32,
+					coords_rect.width as i32, coords_rect.height as i32,
+					if *selected {self.style.action} else {self.style.foreground}
+				);
+				
 			}
 		}
 
@@ -191,7 +291,8 @@ impl Widget {
 		}
 	}
 
-	pub fn add_child(&mut self, w: Widget) {
+	pub fn add_child(mut self, w: Widget) -> Self{
 		self.children.push(w);
+		self
 	}
 }

@@ -42,13 +42,33 @@ impl Application {
 			world,
 			rl_handle,
 			rl_thread,
-			inspector: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame { outline_thickness: 1f32}).style(Style {background: Color::BLACK, foreground: Color::GRAY}),
+			inspector: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame { outline_thickness: 1f32}).style(Style::default().background(Color::BLACK).foreground(Color::WHITE)),
 			contextual_menu: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame {outline_thickness: 0f32}).hidden(),
 			contextual_menu_layout: Layout::new(Vector2::new(600f32, 150f32), Vector2::new(100f32, 200f32))
 		};
 
-		r.inspector.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), WidgetVariant::Label{text: "Hello World!".to_string(), font_size: 24i32}).style(Style {background: Color::RED, foreground: Color::BLUE}));
-		r.contextual_menu.add_child(Widget::new(Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)), WidgetVariant::Label{text: "Ajouter un point".to_string(), font_size: 10i32}).style(Style::default().background(Color::GRAY)));
+		// r.inspector = r.inspector.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), WidgetVariant::Label{text: "Hello World!".to_string(), font_size: 24i32}).style(Style::default()));
+		r.inspector = r.inspector.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Type here".to_string()}
+			)
+		);
+
+		r.contextual_menu = r.contextual_menu.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			).style(Style::default().foreground(Color::GREEN))
+			.add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
+					WidgetVariant::Label {text: "Add point".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
+
+		);
+
 
 		r
 	}
