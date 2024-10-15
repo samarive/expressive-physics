@@ -26,20 +26,22 @@ pub struct Application {
 	world: World,
 	rl_handle: RaylibHandle,
 	rl_thread: RaylibThread,
+	
 	inspector: Widget,
 	contextual_menu: Widget,
+
 	contextual_menu_layout: Layout
 }
 
 impl Application {
-	pub fn realize(world: World) -> Self {
+	pub fn realize() -> Self {
 		let (mut rl_handle, rl_thread) = raylib::init()
 										.size(800, 450)
 										.title("Expressive Physics")
 										.build();
 		rl_handle.set_target_fps(60);
 		let mut r = Application {
-			world,
+			world: World::new(),
 			rl_handle,
 			rl_thread,
 			inspector: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame { outline_thickness: 1f32}).style(Style::default().background(Color::BLACK).foreground(Color::WHITE)),
@@ -48,18 +50,20 @@ impl Application {
 		};
 
 		// r.inspector = r.inspector.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), WidgetVariant::Label{text: "Hello World!".to_string(), font_size: 24i32}).style(Style::default()));
-		r.inspector = r.inspector.add_child(
+		/*r.inspector = r.inspector.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.05f32)),
 				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Type here".to_string()}
 			)
-		);
+		);*/
 
 		r.contextual_menu = r.contextual_menu.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)),
-				WidgetVariant::Button {state: ButtonState::Rest}
-			).style(Style::default().foreground(Color::GREEN))
+				WidgetVariant::Button {
+					state: ButtonState::Rest
+				}
+			).style(Style::default().foreground(Color::GREEN)).id("add point")
 			.add_child(
 				Widget::new(
 					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
@@ -72,6 +76,7 @@ impl Application {
 
 		r
 	}
+
 
 	pub fn mainloop(&mut self) {
 		while !self.rl_handle.window_should_close() {

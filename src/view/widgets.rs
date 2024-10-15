@@ -1,5 +1,6 @@
 //! Contient le nécessaire pour construire des interfaces graphiques simplement.
 
+
 use raylib::prelude::*;
 
 #[derive(Debug)]
@@ -116,7 +117,8 @@ pub struct Widget {
 	variant: WidgetVariant,
 	style: Style,
 	children: Vec::<Widget>,
-	hidden: bool
+	hidden: bool,
+	id: &'static str
 }
 
 impl Widget {
@@ -126,7 +128,8 @@ impl Widget {
 			variant,
 			style: Style::default(),
 			children: Vec::<Widget>::new(),
-			hidden: false
+			hidden: false,
+			id: "Unknown"
 		}
 	}
 	pub fn style(mut self, style: Style) -> Self {
@@ -142,8 +145,33 @@ impl Widget {
 		self.set_visible(false);
 		self
 	}
+	pub fn id(mut self, id: &'static str) -> Self {
+		self.id = id;
+		self
+	}
+
 	pub fn set_visible(&mut self, a: bool) {
 		self.hidden = !a;
+	}
+
+	pub fn is_hidden(&self) -> bool {
+		self.hidden
+	}
+
+	pub fn check_activation_in_tree(&mut self, id: &'static str) -> bool{
+		if let WidgetVariant::Button{state} = &self.variant {
+			if let ButtonState::Activated{..} = state {
+				return true;
+			}
+		}
+		
+		for c in &mut self.children {
+			if c.check_activation_in_tree(id) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	pub fn check_event_in_tree(&mut self, parent_layout: &Layout, rl: &mut RaylibHandle) {
@@ -259,7 +287,7 @@ impl Widget {
 					self.style.foreground
 				);
 			},
-			WidgetVariant::Button {state} => {
+			WidgetVariant::Button {state, ..} => {
 				draw_handle.draw_rectangle_v(true_coords.center - true_coords.size / 2f32, true_coords.size,
 					match state {
 						ButtonState::Activated{..} => self.style.foreground,
@@ -294,5 +322,67 @@ impl Widget {
 	pub fn add_child(mut self, w: Widget) -> Self{
 		self.children.push(w);
 		self
+	}
+}
+
+
+/// Permet d'iterer simplement au travers d'un arbre de widget.
+/// # Exemple
+/// ```
+/// let w = Widget::new(
+/// Layout::new(
+///        Vector2::new(0f32, 0f32),
+///        Vector2::new(1f32, 1f32)
+///    ),
+///    WidgetVariant::Frame {outline_thickness: 1f32}
+/// )
+///.style(
+///   Style::default()
+///     .background(Color::WHITE)
+///     .foreground(Color::BLACK)
+/// )
+/// .add_child(
+///     Widget::new(
+///         Layout::new(
+///             Vector2::new(0f32, 0f32),
+///             Vector2::new(0.8f32, 0.3f32)
+///         ),
+///         WidgetVariant::Label {text: "Hello World!".to_string(), font_size: 16i32}
+///     )
+///     .style(
+///         Style::default()
+///         .background(Color::YELLOW)
+///         .foreground(Color::RED)
+///     )
+/// );
+/// 
+/// for widget in WidgetTreeIterator::new(&w) {
+///     println!("Ce widget est caché : {}", widget.is_hidden());
+/// }
+/// ```
+
+pub struct WidgetTreeIterator<'a> {
+	stack: Vec::<&'a Widget>
+}
+
+impl <'a>WidgetTreeIterator<'a> {
+	pub fn new(w: &'a Widget) -> Self {
+		WidgetTreeIterator {
+			stack: vec![w]
+		}
+	}
+}
+
+impl <'a> Iterator for WidgetTreeIterator<'a> {
+	type Item = &'a Widget;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		let p = self.stack.pop();
+		if let Some(w) = p {
+			for c in w.children.iter() {
+				self.stack.push(c);
+			}
+		}
+		p
 	}
 }

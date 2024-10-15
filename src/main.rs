@@ -13,13 +13,13 @@ use model::physics::*;
 use view::application::Application;
 use raylib::math::Vector2;
 
-
+use view::widgets::*;
+use raylib::prelude::*;
 fn main() {
 
-    let mut world = World::new();
-    world.push(Point::new(Vector2::new(400f32, 225f32)));
 
-    let mut app = Application::realize(world);
+
+    let mut app = Application::realize();
 
     app.mainloop();
 
