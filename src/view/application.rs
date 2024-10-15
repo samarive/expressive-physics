@@ -14,10 +14,7 @@ use super::super::model::tokening::*;
 ///
 ///fn main() {
 ///
-///    let mut world = World::new();
-///    world.push(Point::new(Vector2::new(400f32, 225f32)));
-///
-///    let mut app = Application::realize(world);
+///    let mut app = Application::realize();
 ///
 ///    app.mainloop();
 ///}
@@ -49,7 +46,7 @@ impl Application {
 			contextual_menu_layout: Layout::new(Vector2::new(600f32, 150f32), Vector2::new(100f32, 200f32))
 		};
 
-		// r.inspector = r.inspector.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), WidgetVariant::Label{text: "Hello World!".to_string(), font_size: 24i32}).style(Style::default()));
+		// Temporary UI
 		r.inspector = r.inspector.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.05f32)),
@@ -102,48 +99,68 @@ impl Application {
 				p.simulate();
 			}
 
-			self.inspector.check_event_in_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut self.rl_handle);
-			self.contextual_menu.check_event_in_tree(&self.contextual_menu_layout, &mut self.rl_handle);
+			self.handle_events();
+			self.draw();
+		}
 
-			if self.contextual_menu.check_activation_in_tree("add point") {
-				self.world.push(Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y)));
-			}
-			if self.inspector.check_activation_in_tree("apply forces") {
-				match (Tokenizer::tokenize(&self.inspector.get_entry_in_tree("set ax").unwrap()), Tokenizer::tokenize(&self.inspector.get_entry_in_tree("set ay").unwrap())) {
-					(Ok(tx), Ok(ty)) => {
-						if let Some(p) = self.world.last_mut() {
-							match p.add_force("test", Force {x: tx, y: ty}) {
-								Ok(_) => println!("Force addded !"),
-								Err(e) => println!("Can't add force : {e:?}.")
-							}
-						}
-						else {
-							println!("No point in world !");
+		println!("Application closed successfuly :)");
+	}
+
+	fn handle_events(&mut self) {
+
+		// Make widget trees hear events
+		self.inspector.check_event_in_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut self.rl_handle);
+		self.contextual_menu.check_event_in_tree(&self.contextual_menu_layout, &mut self.rl_handle);
+
+		// Special behaviours
+
+		// Add point button
+		if self.contextual_menu.check_activation_in_tree("add point") {
+			self.world.push(Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y)));
+		}
+
+		// Apply forces button
+		if self.inspector.check_activation_in_tree("apply forces") {
+			match (Tokenizer::tokenize(&self.inspector.get_entry_in_tree("set ax").unwrap()), Tokenizer::tokenize(&self.inspector.get_entry_in_tree("set ay").unwrap())) {
+				(Ok(tx), Ok(ty)) => {
+					if let Some(p) = self.world.last_mut() {
+						match p.add_force("test", Force {x: tx, y: ty}) {
+							Ok(_) => println!("Force addded !"),
+							Err(e) => println!("Can't add force : {e:?}.")
 						}
 					}
-					(Err(e), _) => println!("Error on X expression : {e:?}"),
-					(_, Err(e)) => println!("Error on Y expression : {e:?}")
+					else {
+						println!("No point in world !");
+					}
 				}
+				(Err(e), _) => println!("Error on X expression : {e:?}"),
+				(_, Err(e)) => println!("Error on Y expression : {e:?}")
 			}
-
-			if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
-				self.contextual_menu_layout.center = self.rl_handle.get_mouse_position() + self.contextual_menu_layout.size/2f32;
-				self.contextual_menu.set_visible(true);
-			}
-			if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && !self.contextual_menu_layout.contains(self.rl_handle.get_mouse_position()) {
-				self.contextual_menu.set_visible(false);
-			}
-
-			let mut d = self.rl_handle.begin_drawing(&self.rl_thread);
-
-			d.clear_background(Color::WHITE);
-			for point in self.world.iter() {
-				d.draw_circle_v(point.position(), 5f32, Color::BLACK);
-			}
-
-			self.inspector.draw_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut d);
-			self.contextual_menu.draw_tree(&self.contextual_menu_layout, &mut d);
 		}
+
+		// Toggle contextual menu
+		if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
+			self.contextual_menu_layout.center = self.rl_handle.get_mouse_position() + self.contextual_menu_layout.size/2f32;
+			self.contextual_menu.set_visible(true);
+		}
+		if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && !self.contextual_menu_layout.contains(self.rl_handle.get_mouse_position()) {
+			self.contextual_menu.set_visible(false);
+		}
+	}
+
+	fn draw(&mut self) {
+		let mut d = self.rl_handle.begin_drawing(&self.rl_thread);
+
+		d.clear_background(Color::WHITE);
+
+		for point in self.world.iter() {
+			// TODO : Put single point drawing code into physics::Point structure.
+			// (and refine it a little: add toggleable trail and multiple styles)
+			d.draw_circle_v(point.position(), 5f32, Color::BLACK);
+		}
+
+		self.inspector.draw_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut d);
+		self.contextual_menu.draw_tree(&self.contextual_menu_layout, &mut d);
 	}
 
 }

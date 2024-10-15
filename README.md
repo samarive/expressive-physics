@@ -35,7 +35,7 @@ its documentation.
 			* x = (400 - px)/100
 			* y = (400 - px)/200
 		1. Boiiiing :
-			* x = (400 - px)/50 - 0.01 * vx
+			* x = (400 - px) - 0.01 * vx
 			* y = 0
 		1. Rocket launch :
 			* x = vy + 1
@@ -44,7 +44,9 @@ its documentation.
 # What to do ?
 
 * UI
-	1. Stop input fields from everflowing when the user types a long string
+	1. Stop input fields from overflowing when the user types a long string
+	1. Add a cursor to input fields
+	1. Show errors on window rather than in console
 	1. Show the list of points at the left of the screen
 		* make it scrollable.
 		* make it prompt for a force in the force list when a point is clicked

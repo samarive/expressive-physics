@@ -43,11 +43,28 @@ impl Point {
 			"ax".to_string() => self.acceleration.x,
 			"ay".to_string() => self.acceleration.y
 		};
+
+		// Summing into this variable in order to be able to access current acceleration
+		// rather than access a mid-sumation temporary acceleration 
 		let mut new_acceleration = Vector2::zero();
+		
+		// Summing forces
 		for force in self.forces.iter() {
 			new_acceleration += Vector2::new(
-				Parser::parse(&force.1.x, &context).unwrap(),
-				Parser::parse(&force.1.y, &context).unwrap()
+				match Parser::parse(&force.1.x, &context) {
+					Ok(v) => v,
+					Err(e) => {
+						println!("Error while summing x forces : {e:?}.");
+						0f32
+					}
+				},
+				match Parser::parse(&force.1.y, &context) {
+					Ok(v) => v,
+					Err(e) => {
+						println!("Error while summing y forces : {e:?}.");
+						0f32
+					}
+				}
 			);
 		}
 		self.acceleration = new_acceleration;
