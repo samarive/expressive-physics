@@ -33,7 +33,7 @@ its documentation.
 			* y = 0
 		1. Fly simulation :
 			* x = (400 - px)/100
-			* y = (400 - px)/200
+			* y = (225 - py)/200
 		1. Boiiiing :
 			* x = (400 - px) - 0.01 * vx
 			* y = 0
