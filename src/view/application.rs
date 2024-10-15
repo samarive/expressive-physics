@@ -80,9 +80,13 @@ impl Application {
 
 	pub fn mainloop(&mut self) {
 		while !self.rl_handle.window_should_close() {
-			
+
 			self.inspector.check_event_in_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut self.rl_handle);
 			self.contextual_menu.check_event_in_tree(&self.contextual_menu_layout, &mut self.rl_handle);
+
+			if self.contextual_menu.check_activation_in_tree("add point") {
+				self.world.push(Point::new(Vector2::new(400f32, 225f32)));
+			}
 
 			if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
 				self.contextual_menu_layout.center = self.rl_handle.get_mouse_position() + self.contextual_menu_layout.size/2f32;

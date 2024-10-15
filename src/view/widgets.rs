@@ -60,7 +60,7 @@ impl Style {
 pub enum ButtonState {
 	Rest,
 	Hovered,
-	Activated {countdown: i32}
+	Activated {countdown: i32, handled: bool},
 }
 
 pub enum WidgetVariant {
@@ -158,10 +158,17 @@ impl Widget {
 		self.hidden
 	}
 
+	pub fn get_id(&self) -> &str  {
+		self.id
+	}
+
 	pub fn check_activation_in_tree(&mut self, id: &'static str) -> bool{
-		if let WidgetVariant::Button{state} = &self.variant {
-			if let ButtonState::Activated{..} = state {
-				return true;
+		if self.id == id {
+			if let WidgetVariant::Button{state: ButtonState::Activated{handled, ..}} = &mut self.variant {
+				if !*handled {
+					*handled = true;
+					return true;
+				} 
 			}
 		}
 		
@@ -201,7 +208,7 @@ impl Widget {
 						*state = ButtonState::Hovered;
 					}
 					if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
-						*state = ButtonState::Activated {countdown: 8i32};
+						*state = ButtonState::Activated {countdown: 8i32, handled: false};
 						println!("Button clicked");
 					}
 				}
@@ -211,7 +218,7 @@ impl Widget {
 					}
 				}
 
-				if let ButtonState::Activated{countdown} = state {
+				if let ButtonState::Activated{countdown, ..} = state {
 					*countdown -= 1;
 					if *countdown <= 0 {
 						*state = ButtonState::Hovered;
