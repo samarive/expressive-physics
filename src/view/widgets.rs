@@ -67,7 +67,7 @@ pub enum WidgetVariant {
 	Frame {outline_thickness: f32},
 	Label {text: String, font_size: i32},
 	Button {state: ButtonState},
-	TextInput {selected: bool, placeholder: String, text: String}
+	TextInput {selected: bool, placeholder: String, text: String, registered: bool}
 }
 
 
@@ -162,6 +162,25 @@ impl Widget {
 		self.id
 	}
 
+	pub fn check_entry_in_tree(&mut self, id: &'static str) -> Option<String> {
+		if self.id == id {
+			if let WidgetVariant::TextInput {text, registered, ..} = &mut self.variant {
+				if !*registered {
+					*registered = true;
+					return Some(String::clone(text));
+				} 
+			}
+		}
+
+		for c in &mut self.children {
+			if let Some(s) = c.check_entry_in_tree(id) {
+				return Some(s);
+			}
+		}
+
+		return None;
+	}
+
 	pub fn check_activation_in_tree(&mut self, id: &'static str) -> bool{
 		if self.id == id {
 			if let WidgetVariant::Button{state: ButtonState::Activated{handled, ..}} = &mut self.variant {
@@ -226,7 +245,7 @@ impl Widget {
 				}
 
 			},
-			WidgetVariant::TextInput {selected, text, ..} => {
+			WidgetVariant::TextInput {selected, text, registered, ..} => {
 				if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && true_coords.contains(mouse) {
 					*selected = true;
 				}
@@ -240,7 +259,10 @@ impl Widget {
 						None => if let Some(key) = rl.get_key_pressed() {
 							match key {
 								KeyboardKey::KEY_BACKSPACE => {text.pop();},
-								KeyboardKey::KEY_ENTER => {*selected = false;}
+								KeyboardKey::KEY_ENTER => {
+									*selected = false;
+									*registered = false;
+								}
 								_ => {}
 							}
 						}
@@ -303,7 +325,7 @@ impl Widget {
 					}
 				);
 			}
-			WidgetVariant::TextInput {selected, placeholder, text} => {
+			WidgetVariant::TextInput {selected, placeholder, text, ..} => {
 				draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
 				draw_handle.draw_text(
 					if text.is_empty() {placeholder} else {text},

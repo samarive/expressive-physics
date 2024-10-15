@@ -3,7 +3,7 @@
 use raylib::prelude::*;
 use super::super::model::physics::*;
 use super::widgets::*;
-
+use super::super::model::tokening::*;
 
 /// Gère les evenements, les visuels et les simulations
 /// # Exemple
@@ -50,12 +50,12 @@ impl Application {
 		};
 
 		// r.inspector = r.inspector.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), WidgetVariant::Label{text: "Hello World!".to_string(), font_size: 24i32}).style(Style::default()));
-		/*r.inspector = r.inspector.add_child(
+		r.inspector = r.inspector.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.05f32)),
-				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Type here".to_string()}
-			)
-		);*/
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Type here".to_string(), registered: true}
+			).id("set last point ax")
+		);
 
 		r.contextual_menu = r.contextual_menu.add_child(
 			Widget::new(
@@ -81,11 +81,31 @@ impl Application {
 	pub fn mainloop(&mut self) {
 		while !self.rl_handle.window_should_close() {
 
+			for p in self.world.iter_mut() {
+				p.simulate();
+			}
+
 			self.inspector.check_event_in_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut self.rl_handle);
 			self.contextual_menu.check_event_in_tree(&self.contextual_menu_layout, &mut self.rl_handle);
 
 			if self.contextual_menu.check_activation_in_tree("add point") {
-				self.world.push(Point::new(Vector2::new(400f32, 225f32)));
+				self.world.push(Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y)));
+			}
+			if let Some(s) = self.inspector.check_entry_in_tree("set last point ax") {
+				if let Some(p) = self.world.last_mut() {
+					match Tokenizer::tokenize(&s) {
+						Ok(t) => {
+							match p.add_force("test", Force {x: t, y: vec![Token::Value(0f32)]}) {
+								Ok(_) => println!("Force ajoutée !"),
+								Err(e) => println!("Impossible d'ajouter la force : {e}.")
+							}
+						},
+						Err(e) => {
+							println!("Ill formated expression : {:?}.", e);
+						}
+					}
+					
+				}
 			}
 
 			if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {

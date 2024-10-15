@@ -37,8 +37,8 @@ its documentation.
 		* a Point should only have immutables pointers to forces it is submited to
 	1. Change World from Vec::< Point > to its very own type and let it handle simulations etm
 * Code quality
-	1. IMPORTANT: Refactor Widget::check_event_in_tree, Widget::check_activation_in_tree, Widget::draw_tree and
-Widget::check_entry_in_tree, these methodes have a shitload of redondancy.
+	1. IMPORTANT: Refactor ```Widget::check_event_in_tree```, ```Widget::check_activation_in_tree```, ```Widget::draw_tree``` and
+```Widget::check_entry_in_tree```, these methodes have a shitload of redundancy.
 	1. Document and clean up every last bit of code !
 
 When all of this will be completed, the app should be usable !

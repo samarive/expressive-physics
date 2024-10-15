@@ -186,6 +186,12 @@ impl Tokenizer {
 			}
 		}
 
+		// If tokenizing ended by an error, we need to return it due to the 1 loop delay between
+		// an error registration and its treatment in the automat.
+		if let TokenizerState::Error(e) = state {
+			return Err(e);
+		}
+
 		// If expression ends by a variable name, it is not parsed until now.
 		if let Some(token) = Self::parse_buffer(&mut buffer) {
 			r.push(token);

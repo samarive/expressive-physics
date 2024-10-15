@@ -7,8 +7,8 @@ use super::parsing::Parser;
 pub type World = Vec::<Point>;
 
 pub struct Force {
-	x: Vec::<Token>,
-	y: Vec::<Token>
+	pub x: Vec::<Token>,
+	pub y: Vec::<Token>
 }
 
 pub struct Point {
