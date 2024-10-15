@@ -62,8 +62,6 @@ its documentation.
 	1. Make expressions accept negative values rather than having to substract to zero.
 	1. Make expressions accept trigonometrics functions, exponentials, sqrt, powers etc...
 * Code quality
-	1. IMPORTANT: Refactor ```Widget::check_event_in_tree```, ```Widget::check_activation_in_tree```, ```Widget::draw_tree```,
-```Widget::check_entry_in_tree``` and ```Widget::get_entry_in_tree```, these methodes have a shitload of redundancy.
 	1. Document and clean up every last bit of code !
 
 When all of this will be completed, the app should be usable !
