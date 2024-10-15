@@ -162,6 +162,22 @@ impl Widget {
 		self.id
 	}
 
+	pub fn get_entry_in_tree(&mut self, id: &'static str) -> Option<String> {
+		if self.id == id {
+			if let WidgetVariant::TextInput {text, ..} = &mut self.variant {
+				return Some(String::clone(text)); 
+			}
+		}
+
+		for c in &mut self.children {
+			if let Some(s) = c.get_entry_in_tree(id) {
+				return Some(s);
+			}
+		}
+
+		return None;
+	}
+
 	pub fn check_entry_in_tree(&mut self, id: &'static str) -> Option<String> {
 		if self.id == id {
 			if let WidgetVariant::TextInput {text, registered, ..} = &mut self.variant {
@@ -251,6 +267,7 @@ impl Widget {
 				}
 				else if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
 					*selected = false;
+					*registered = false;
 				}
 
 				if *selected {

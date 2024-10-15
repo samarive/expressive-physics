@@ -52,9 +52,26 @@ impl Application {
 		// r.inspector = r.inspector.add_child(Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.3f32)), WidgetVariant::Label{text: "Hello World!".to_string(), font_size: 24i32}).style(Style::default()));
 		r.inspector = r.inspector.add_child(
 			Widget::new(
-				Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.8f32, 0.05f32)),
-				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Type here".to_string(), registered: true}
-			).id("set last point ax")
+				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration X".to_string(), registered: true}
+			).id("set ax")
+		);
+		r.inspector = r.inspector.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.3f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration Y".to_string(), registered: true}
+			).id("set ay")
+		);
+		r.inspector = r.inspector.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.2f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			).id("apply forces").add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
+					WidgetVariant::Label {text: "Apply force !".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
 		);
 
 		r.contextual_menu = r.contextual_menu.add_child(
@@ -91,20 +108,21 @@ impl Application {
 			if self.contextual_menu.check_activation_in_tree("add point") {
 				self.world.push(Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y)));
 			}
-			if let Some(s) = self.inspector.check_entry_in_tree("set last point ax") {
-				if let Some(p) = self.world.last_mut() {
-					match Tokenizer::tokenize(&s) {
-						Ok(t) => {
-							match p.add_force("test", Force {x: t, y: vec![Token::Value(0f32)]}) {
-								Ok(_) => println!("Force ajoutée !"),
-								Err(e) => println!("Impossible d'ajouter la force : {e}.")
+			if self.inspector.check_activation_in_tree("apply forces") {
+				match (Tokenizer::tokenize(&self.inspector.get_entry_in_tree("set ax").unwrap()), Tokenizer::tokenize(&self.inspector.get_entry_in_tree("set ay").unwrap())) {
+					(Ok(tx), Ok(ty)) => {
+						if let Some(p) = self.world.last_mut() {
+							match p.add_force("test", Force {x: tx, y: ty}) {
+								Ok(_) => println!("Force addded !"),
+								Err(e) => println!("Can't add force : {e:?}.")
 							}
-						},
-						Err(e) => {
-							println!("Ill formated expression : {:?}.", e);
+						}
+						else {
+							println!("No point in world !");
 						}
 					}
-					
+					(Err(e), _) => println!("Error on X expression : {e:?}"),
+					(_, Err(e)) => println!("Error on Y expression : {e:?}")
 				}
 			}
 
