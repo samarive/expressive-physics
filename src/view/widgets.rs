@@ -34,9 +34,9 @@ pub struct Style {
 impl Style {
 	pub fn default() -> Self {
 		Style {
-			background: Color::WHITE,
+			background: Color::new(255, 255, 255, 100),
 			foreground: Color::BLACK,
-			action: Color::GRAY
+			action: Color::new(100, 100, 100, 100)
 		}
 	}
 
@@ -63,6 +63,7 @@ pub enum ButtonState {
 	Activated {countdown: i32, handled: bool},
 }
 
+#[derive(Debug)]
 pub enum WidgetVariant {
 	Frame {outline_thickness: f32},
 	Label {text: String, font_size: i32},
@@ -118,7 +119,7 @@ pub struct Widget {
 	style: Style,
 	children: Vec::<Widget>,
 	hidden: bool,
-	id: &'static str
+	id: String
 }
 
 impl Widget {
@@ -132,7 +133,7 @@ impl Widget {
 			style: Style::default(),
 			children: Vec::<Widget>::new(),
 			hidden: false,
-			id: "Unknown"
+			id: String::from("Unknown")
 		}
 	}
 	pub fn style(mut self, style: Style) -> Self {
@@ -148,10 +149,12 @@ impl Widget {
 		self.set_visible(false);
 		self
 	}
-	pub fn id(mut self, id: &'static str) -> Self {
+	pub fn id(mut self, id: String) -> Self {
 		self.id = id;
 		self
 	}
+
+	// ___________________________________Setters__________________________________
 
 	pub fn set_visible(&mut self, a: bool) {
 		self.hidden = !a;
@@ -164,10 +167,26 @@ impl Widget {
 	}
 
 	pub fn get_id(&self) -> &str  {
-		self.id
+		&self.id
+	}
+
+	pub fn get_variant(&mut self) -> &mut WidgetVariant {
+		&mut self.variant
 	}
 
 	// __________________________________Tree tools______________________________________
+
+	pub fn seek_in_tree(&mut self, id: &'static str) -> Option<&mut Widget> {
+		if self.id == id {
+			return Some(self);
+		}
+		for c in self.children.iter_mut() {
+			if let Some(w) = c.seek_in_tree(id) {
+				return Some(w);
+			}
+		}
+		return None;
+	}
 
 	/// Returns the content of the first TextInput of a given id encountered
 	/// in depth-first iteration.
@@ -222,6 +241,23 @@ impl Widget {
 		return None;
 	}
 
+	pub fn get_all_activations(&mut self) -> Vec::<String> {
+		let mut r = Vec::<String>::new();
+		
+		if let WidgetVariant::Button{state: ButtonState::Activated{handled, ..}} = &mut self.variant {
+			if !*handled {
+				*handled = true;
+				r.push(self.id.clone());
+			} 
+		}
+
+		for c in self.children.iter_mut() {
+			c.get_all_activations().iter().for_each(|x| r.push(x.clone()));
+		}
+
+		r
+	}
+
 	/// Check if a Button of a given id is not yet handled despite having been activated, if so, flag it
 	/// as handled.
 	/// # When to use ?
@@ -260,9 +296,6 @@ impl Widget {
 		let mouse = rl.get_mouse_position();
 
 		match &mut self.variant {
-			WidgetVariant::Label {text, ..} => {
-				Self::handle_events_as_label(text, &true_coords, mouse, rl);
-			},
 			WidgetVariant::Button {state} => {
 				Self::handle_events_as_button(state, &true_coords, mouse, rl);
 			},
@@ -314,9 +347,28 @@ impl Widget {
 		}
 	}
 
-	pub fn add_child(mut self, w: Widget) -> Self{
+	pub fn add_child(mut self, w: Widget) -> Self {
 		self.children.push(w);
 		self
+	}
+
+	pub fn add_child_inplace(&mut self, w: Widget) {
+		self.children.push(w);
+	}
+
+	// Returns the number of children closer than depth.
+	pub fn get_children_count(&self, depth: u32) -> u32{
+		if depth == 0u32 {
+			return 0u32;
+		}
+
+		let mut count = 0u32;
+
+		for c in self.children.iter() {
+			count += 1u32 + c.get_children_count(depth - 1);
+		}
+
+		count
 	}
 
 	// Private functions, mainly useful for organizing code complexity.
@@ -340,7 +392,8 @@ impl Widget {
 	fn draw_as_frame(&self, outline_thickness: f32, coords_rect: Rectangle, draw_handle: &mut RaylibDrawHandle) {
 		let outline = Vector2::new(outline_thickness, outline_thickness);
 
-		draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
+		// draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
+		draw_handle.draw_rectangle_lines_ex(coords_rect, outline_thickness, self.style.background);
 		draw_handle.draw_rectangle_v(
 			Vector2::new(coords_rect.x, coords_rect.y) + outline, Vector2::new(coords_rect.width, coords_rect.height) - outline * 2f32,
 			self.style.foreground
@@ -386,11 +439,6 @@ impl Widget {
 
 	// Events
 
-	fn handle_events_as_label(text: &str, true_coords: &Layout, mouse: Vector2, rl: &mut RaylibHandle) {
-		if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && true_coords.contains(mouse){
-			println!("Label '{text}' clicked !");
-		}
-	}
 	fn handle_events_as_button(state: &mut ButtonState, true_coords: &Layout, mouse: Vector2, rl: &mut RaylibHandle) {
 		if true_coords.contains(mouse) {
 			if let ButtonState::Rest = *state {
@@ -398,7 +446,6 @@ impl Widget {
 			}
 			if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
 				*state = ButtonState::Activated {countdown: 8i32, handled: false};
-				println!("Button clicked");
 			}
 		}
 		else {

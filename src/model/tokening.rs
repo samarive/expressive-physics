@@ -79,7 +79,7 @@ impl Tokenizer {
 							buffer.push(c);
 							TokenizerState::NumberBeforeDot
 						},
-						'a' ..= 'z' => {
+						'a' ..= 'z' | 'A' ..= 'Z' => {
 							buffer.push(c);
 							TokenizerState::VariableName
 						}
@@ -156,7 +156,7 @@ impl Tokenizer {
 				},
 				TokenizerState::VariableName => {
 					state = match c {
-						'0' ..= '9' | 'a' ..= 'z' => {
+						'0' ..= '9' | 'a' ..= 'z' | 'A' ..= 'Z' => {
 							buffer.push(c);
 							TokenizerState::VariableName
 						}
