@@ -45,6 +45,7 @@ its documentation.
 
 ![Points orbiting](screenshots/orbits.png "Points orbiting")
 ![Spring-like motion](screenshots/boing.png "Spring-like motion")
+![Heart](screenshots/coeur.png "Heart")
 
 # What to do ?
 
