@@ -1,5 +1,5 @@
-use raylib::math::Vector2;
-use std::collections::HashMap;
+use raylib::prelude::*;
+use std::collections::{HashMap, VecDeque};
 use common_macros::hash_map;
 use super::tokening::Token;
 use super::parsing::Parser;
@@ -12,19 +12,27 @@ pub struct Force {
 }
 
 pub struct Point {
+	// Simulation data
 	position: Vector2,
 	speed: Vector2,
 	acceleration: Vector2,
-	forces: HashMap::<String, Force>
+	forces: HashMap::<String, Force>,
+
+	// Drawing data
+	trail: Option::<VecDeque::<Vector2>>
 }
 
 impl Point {
+
+	const TRAIL_LENGTH: usize = 100;
+
 	pub fn new(position: Vector2) -> Point{
 		Point {
 			position,
 			speed: Vector2::zero(),
 			acceleration: Vector2::zero(),
-			forces: HashMap::<String, Force>::new()
+			forces: HashMap::<String, Force>::new(),
+			trail: None
 		}
 	}
 
@@ -32,7 +40,35 @@ impl Point {
 		self.position
 	}
 
+	pub fn set_trail_visibility(&mut self, b: bool) {
+		match &mut self.trail {
+			Some(t) =>
+				if b {t.clear();}
+				else {self.trail = None;}
+			None => 
+				if b {
+					self.trail = Some(VecDeque::<Vector2>::new());
+				}
+		}
+	}
+
 	pub fn simulate(&mut self) {
+		
+		if let Some(t) = &mut self.trail {
+			let mut should_push = true;
+			if let Some(l) = t.iter().last() {
+				if *l == self.position {
+					should_push = false;
+				}
+			}
+
+			if should_push {t.push_back(self.position);}
+			
+			if t.len() > Self::TRAIL_LENGTH {
+				t.pop_front();
+			}
+		}
+
 		self.position += self.speed;
 		
 		let context = hash_map!{
@@ -80,6 +116,23 @@ impl Point {
 		else {
 			Err("Invalid variable in force expression.".to_string())
 		}
+	}
+
+	pub fn draw(&mut self, handle: &mut RaylibDrawHandle) {
+	
+		if let Some(t) = &mut self.trail {
+			if t.len() > 0 {
+				for i in 0..t.len()-1 {
+					let prop = (i as f32)/(t.len() as f32);
+					let value_prop = (255f32 * prop) as u8;
+
+					handle.draw_line_ex(t[i], t[i+1], 10f32 * prop, Color::new(value_prop, value_prop/2, 255 - value_prop, value_prop));
+				}
+			}
+		
+		}
+
+		handle.draw_circle_v(self.position, 5f32, Color::BLACK);
 	}
 
 	fn only_contains_valid_variables(tokens: &Vec::<Token>) -> bool {

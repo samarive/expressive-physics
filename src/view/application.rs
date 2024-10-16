@@ -37,7 +37,7 @@ impl Application {
 										.title("Expressive Physics")
 										.build();
 		rl_handle.set_target_fps(60);
-		let mut r = Application {
+		let r = Application {
 			world: World::new(),
 			rl_handle,
 			rl_thread,
@@ -47,48 +47,10 @@ impl Application {
 		};
 
 		// Temporary UI
-		r.inspector = r.inspector.add_child(
-			Widget::new(
-				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.05f32)),
-				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration X".to_string(), registered: true}
-			).id("set ax")
-		);
-		r.inspector = r.inspector.add_child(
-			Widget::new(
-				Layout::new(Vector2::new(0f32, -0.3f32), Vector2::new(0.8f32, 0.05f32)),
-				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration Y".to_string(), registered: true}
-			).id("set ay")
-		);
-		r.inspector = r.inspector.add_child(
-			Widget::new(
-				Layout::new(Vector2::new(0f32, -0.2f32), Vector2::new(0.8f32, 0.05f32)),
-				WidgetVariant::Button {state: ButtonState::Rest}
-			).id("apply forces").add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
-					WidgetVariant::Label {text: "Apply force !".to_string(), font_size: 16i32}
-				).style(Style::default().background(Color::new(0, 0, 0, 0)))
-			)
-		);
-
-		r.contextual_menu = r.contextual_menu.add_child(
-			Widget::new(
-				Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)),
-				WidgetVariant::Button {
-					state: ButtonState::Rest
-				}
-			).style(Style::default().foreground(Color::GREEN)).id("add point")
-			.add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
-					WidgetVariant::Label {text: "Add point".to_string(), font_size: 16i32}
-				).style(Style::default().background(Color::new(0, 0, 0, 0)))
-			)
-
-		);
-
 
 		r
+		.build_inspector()
+		.build_contextual_menu()
 	}
 
 
@@ -117,6 +79,7 @@ impl Application {
 		// Add point button
 		if self.contextual_menu.check_activation_in_tree("add point") {
 			self.world.push(Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y)));
+			self.world.last_mut().unwrap().set_trail_visibility(true);
 		}
 
 		// Apply forces button
@@ -153,14 +116,60 @@ impl Application {
 
 		d.clear_background(Color::WHITE);
 
-		for point in self.world.iter() {
-			// TODO : Put single point drawing code into physics::Point structure.
-			// (and refine it a little: add toggleable trail and multiple styles)
-			d.draw_circle_v(point.position(), 5f32, Color::BLACK);
+		for point in self.world.iter_mut() {
+			point.draw(&mut d);
 		}
 
 		self.inspector.draw_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut d);
 		self.contextual_menu.draw_tree(&self.contextual_menu_layout, &mut d);
+	}
+
+	fn build_contextual_menu(mut self) -> Self {
+		self.contextual_menu = self.contextual_menu.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)),
+				WidgetVariant::Button {
+					state: ButtonState::Rest
+				}
+			).style(Style::default().foreground(Color::GREEN)).id("add point")
+			.add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
+					WidgetVariant::Label {text: "Add point".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
+
+		);
+
+		self
+	}
+
+	fn build_inspector(mut self) -> Self {
+		self.inspector = self.inspector.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration X".to_string(), registered: true}
+			).id("set ax")
+		);
+		self.inspector = self.inspector.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.3f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration Y".to_string(), registered: true}
+			).id("set ay")
+		);
+		self.inspector = self.inspector.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.2f32), Vector2::new(0.8f32, 0.05f32)),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			).id("apply forces").add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
+					WidgetVariant::Label {text: "Apply force !".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
+		);
+
+		self
 	}
 
 }

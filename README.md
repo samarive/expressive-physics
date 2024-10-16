@@ -41,6 +41,11 @@ its documentation.
 			* x = vy + 1
 			* y = vx - 1.0000001
 
+# Screenshots
+
+![Points orbiting](screenshots/orbits.png "Points orbiting")
+![Spring-like motion](screenshots/boing.png "Spring-like motion")
+
 # What to do ?
 
 * UI
