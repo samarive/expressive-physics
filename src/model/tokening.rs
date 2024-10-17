@@ -84,10 +84,10 @@ impl Tokenizer {
 							TokenizerState::VariableName
 						}
 						'+' | '-' | '*' | '/' => {
-							// Checks if last item is an operator (or if there is no last item), if so, expression is invalid (two operators in a row)
+							// Two operators in a row throws UnexpectedOperator.
 							match r.last() {
-								None | Some(Token::Operator(_)) => TokenizerState::Error(TokenizerError::UnexpectedOperator(i)),
-								Some(_) => {
+								Some(Token::Operator(_)) => TokenizerState::Error(TokenizerError::UnexpectedOperator(i)),
+								_ => {
 									r.push(Token::Operator(c));
 									TokenizerState::Initial
 								}

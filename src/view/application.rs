@@ -42,29 +42,101 @@ impl Application {
 										.title("Expressive Physics")
 										.build();
 		rl_handle.set_target_fps(60);
-		let r = Application {
+		
+		Application {
 			world: World::new(),
 			selected_point: -1i32,
 
 			rl_handle,
 			rl_thread,
 			
-			inspector: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame { outline_thickness: 1f32}).style(Style::default().background(Color::BLACK).foreground(Color::new(255, 255, 255, 100))),
-			contextual_menu: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame {outline_thickness: 0f32}).hidden(),
-			point_menu: Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame {outline_thickness: 1f32}).style(Style::default().background(Color::BLACK).foreground(Color::new(255, 255, 255, 100))),
+			      inspector: Self::build_default_inspector(),
+			contextual_menu: Self::build_default_contextual_menu(),
+			     point_menu: Self::build_default_point_menu(),
 			
-			inspector_layout: Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)),
-			point_menu_layout: Layout::new(Vector2::new(600f32, 100f32), Vector2::new(400f32, 200f32)),
+			      inspector_layout: Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)),
+				 point_menu_layout: Layout::new(Vector2::new(600f32, 100f32), Vector2::new(400f32, 200f32)),
 			contextual_menu_layout: Layout::new(Vector2::new(600f32, 150f32), Vector2::new(100f32, 200f32))
-		};
-
-		// Temporary UI
-
-		r
-		.build_contextual_menu()
-		.build_point_menu()
+		}
 	}
 
+	fn build_default_inspector() -> Widget {
+		Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame { outline_thickness: 1f32}).style(Style::default().background(Color::BLACK).foreground(Color::new(255, 255, 255, 100)))
+	}
+
+	fn build_default_contextual_menu() -> Widget {
+		Widget::new(
+			Layout::new(
+				Vector2::new(0f32, 0f32),
+				Vector2::new(1f32, 1f32)),
+			WidgetVariant::Frame {
+				outline_thickness: 0f32
+			}
+		)
+		.hidden()
+		.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)),
+				WidgetVariant::Button {
+					state: ButtonState::Rest
+				}
+			).style(Style::default().foreground(Color::GREEN).action(Color::GRAY)).id("add point".to_string())
+			.add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
+					WidgetVariant::Label {text: "Add point".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
+
+		)
+	}
+
+	fn build_default_point_menu() -> Widget {
+		Widget::new(
+			Layout::new(
+				Vector2::new(0f32, 0f32),
+				Vector2::new(1f32, 1f32)),
+			WidgetVariant::Frame {
+				outline_thickness: 1f32
+			}
+		)
+		.style(Style::default()
+		.background(Color::BLACK)
+		.foreground(Color::new(255, 255, 255, 100)))
+		.hidden()
+		.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.2f32)),
+				WidgetVariant::Label {text: format!("Point properties"), font_size: 24i32}
+			).id("title".to_string())
+		)
+		.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.15f32), Vector2::new(0.8f32, 0.15f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration X".to_string(), registered: true}
+			).id("set ax".to_string())
+		)
+		.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, 0.05f32), Vector2::new(0.8f32, 0.15f32)),
+				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration Y".to_string(), registered: true}
+			).id("set ay".to_string())
+		)
+		.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, 0.3f32), Vector2::new(0.4f32, 0.2f32)),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			).style(Style::default())
+			.id("apply forces".to_string())
+			.add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.9f32, 0.9f32)),
+					WidgetVariant::Label {text: "Apply force !".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
+		)
+		
+	}
 
 	pub fn mainloop(&mut self) {
 		while !self.rl_handle.window_should_close() {
@@ -88,14 +160,9 @@ impl Application {
 		self.contextual_menu.check_event_in_tree(&self.contextual_menu_layout, &mut self.rl_handle);
 
 		// Special behaviours
-
-		let contextual_activations = self.contextual_menu.get_all_activations();
-		let inspector_activations  = self.inspector.get_all_activations();
-		let point_menu_activations = self.point_menu.get_all_activations();
-
-		self.contextual_menu_events(contextual_activations);
-		self.inspector_events(inspector_activations);
-		self.point_menu_events(point_menu_activations);
+		self.contextual_menu_events();
+		self.inspector_events();
+		self.point_menu_events();
 				
 	}
 
@@ -113,25 +180,6 @@ impl Application {
 		self.contextual_menu.draw_tree(&self.contextual_menu_layout, &mut d);
 	}
 
-	fn build_contextual_menu(mut self) -> Self {
-		self.contextual_menu = self.contextual_menu.add_child(
-			Widget::new(
-				Layout::new(Vector2::new(0f32, -0.45f32), Vector2::new(1f32, 0.1f32)),
-				WidgetVariant::Button {
-					state: ButtonState::Rest
-				}
-			).style(Style::default().foreground(Color::GREEN).action(Color::GRAY)).id("add point".to_string())
-			.add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
-					WidgetVariant::Label {text: "Add point".to_string(), font_size: 16i32}
-				).style(Style::default().background(Color::new(0, 0, 0, 0)))
-			)
-
-		);
-
-		self
-	}
 
 	fn show_point_menu(&mut self, id: i32) {
 		if let Some(title) = self.point_menu.seek_in_tree("title") {
@@ -142,46 +190,10 @@ impl Application {
 		self.point_menu.set_visible(true);
 	}
 
-	fn build_point_menu(mut self) -> Self {
+	fn contextual_menu_events(&mut self) {
+		
+		let contextual_activations = self.contextual_menu.get_all_activations();
 
-		self.point_menu = self.point_menu
-			.add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.2f32)),
-					WidgetVariant::Label {text: format!("Point properties"), font_size: 24i32}
-				).id("title".to_string())
-			)
-			.add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, -0.15f32), Vector2::new(0.8f32, 0.15f32)),
-					WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration X".to_string(), registered: true}
-				).id("set ax".to_string())
-			)
-			.add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, 0.05f32), Vector2::new(0.8f32, 0.15f32)),
-					WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration Y".to_string(), registered: true}
-				).id("set ay".to_string())
-			)
-			.add_child(
-				Widget::new(
-					Layout::new(Vector2::new(0f32, 0.3f32), Vector2::new(0.4f32, 0.2f32)),
-					WidgetVariant::Button {state: ButtonState::Rest}
-				).style(Style::default())
-				.id("apply forces".to_string())
-				.add_child(
-					Widget::new(
-						Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.9f32, 0.9f32)),
-						WidgetVariant::Label {text: "Apply force !".to_string(), font_size: 16i32}
-					).style(Style::default().background(Color::new(0, 0, 0, 0)))
-				)
-			)
-			.hidden();
-
-		self
-	}
-
-	fn contextual_menu_events(&mut self, contextual_activations: Vec::<String>) {
 		if contextual_activations.contains(&"add point".to_string()) {
 			
 			// Adding point in world
@@ -222,7 +234,9 @@ impl Application {
 		}
 	}
 
-	fn inspector_events(&mut self, inspector_activations: Vec::<String>) {
+	fn inspector_events(&mut self) {
+		let inspector_activations = self.inspector.get_all_activations();
+
 		let mut handle_activated = false;
 		for id in inspector_activations.iter() {
 			if id.starts_with("point") {
@@ -247,7 +261,10 @@ impl Application {
 		}
 	}
 
-	fn point_menu_events(&mut self, point_menu_activations: Vec::<String>) {
+	fn point_menu_events(&mut self) {
+
+		let point_menu_activations = self.point_menu.get_all_activations();
+
 		if point_menu_activations.contains(&"apply forces".to_string()) {
 			match (
 				Tokenizer::tokenize(&self.point_menu.get_entry_in_tree("set ax").unwrap_or("0".to_string())),
@@ -256,9 +273,8 @@ impl Application {
 				(Ok(tx), Ok(ty)) => {
 					match self.world.get_mut(self.selected_point as usize) {
 						Some(point) => {
-							match point.add_force("test", Force {x: tx, y: ty}) {
-								Ok(_) => println!("Force addded !"),
-								Err(e) => println!("Can't add force : {e:?}.")
+							if let Err(e) = point.add_force("test", Force {x: tx, y: ty}) {
+								println!("Can't add force : {e:?}.")
 							}
 						},
 						None => println!("Error : Trying to set forces of point {} which doesn't exist.", self.selected_point)

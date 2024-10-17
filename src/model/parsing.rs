@@ -6,9 +6,11 @@ use std::collections::HashMap;
 pub enum ParsingError {
 	DivisionByZero,
 	UnknownOperator (char),
+	InvalidUnaryOperator (char),
 	NoOperator,
 	NotAValue,
-	MissingVariableInContext (String)
+	MissingVariableInContext (String),
+	EmptyTokenData
 }
 
 pub type VariableContext = HashMap::<String, f32>;
@@ -28,12 +30,11 @@ impl Parser {
 	/// calculation.
 	fn recursive_parsing(tokens: &Vec::<Token>, context: &VariableContext, start: usize, end: usize) -> Result<f32, ParsingError> {
 
-		// Should never happen when this method is called recursively.
-		// Hence, this block will be executed if and only if the user
-		// explicitly passes an empty vector of token as tokens.
+		// this block will be executed if user explicitly passes
+		// an empty vector of token as tokens or if we came accross
+		// an unary operator.
 		if start >= end {
-			dbg!("Warning : Came accross an empty token vector (or filled with parenthesis) in recursive_parsing.");
-			return Ok(0f32);
+			return Err(ParsingError::EmptyTokenData)
 		}
 
 		/*
@@ -56,8 +57,22 @@ impl Parser {
 							'*' => Ok(left_hand * right_hand),
 							 _  => Err(ParsingError::UnknownOperator(op.0)) 
 						}
-					}, 
-					// If either of the recursive calls fails, make this method fail.
+					},
+					(Err(ParsingError::EmptyTokenData), Ok(value)) => {
+						match op.0 {
+							'-' => Ok(-value),
+							 _  => Err(ParsingError::InvalidUnaryOperator (op.0))
+						}
+					},
+					(Ok(_), Err(ParsingError::EmptyTokenData)) => {
+						// TODO: DELETE THIS, DEBUGGING PURPOSE
+						for t in tokens[start..end].iter() {
+							println!("{t:?}");
+						}
+						println!("===================================");
+						Err(ParsingError::EmptyTokenData)
+					},
+					// If either of the recursive calls fails unexpectedly, make this method fail.
 					(Err(e), Ok(_)) | (Ok(_), Err(e)) | (Err(e), Err(_)) => Err(e)
 				}
 			},
@@ -67,16 +82,39 @@ impl Parser {
 				//		1) (*[Variable | Value]
 				//      2) [Variable | Value])*
 				//		3) [Variable | Value]
-				// If it is not 1), then it is 2) or 3) which are both parsed the same way.
-				let mut token_then_only_prths = true; // which is in fact as well true when treating 2) as when treating 3).
+				//		4) (*
+				// If it is not 1) or 4), then it is 2) or 3) which are both parsed the same way.
+				// If it is 1) or 4), the difference is handled later.
+				/*let mut token_then_only_prths = true; // which is in fact as well true when treating 2) as when treating 3).
 				for i in start..end {
 					if i != start && tokens[i] != Token::Parenthesis(false) {
 						token_then_only_prths = false;
 					}
-				}
+				}*/
+				let token_then_only_prths = match tokens[start] {
+					Token::Parenthesis(true) => false,
+					Token::Parenthesis(false) => {
+						println!("Should never happen 1, delete after rigorous testing.");
+						false
+					},
+					_ => true
+				};
 				
 				// Points to the token that contains the value or the variable
-				let contains_value = if token_then_only_prths {&tokens[start]} else {&tokens[end-1]};
+				let contains_value = if token_then_only_prths {
+					&tokens[start]
+				} else {
+					match &tokens[end-1] {
+						Token::Value(_) | Token::Variable(_) => &tokens[end-1],
+						Token::Parenthesis(true) => {
+							return Ok(0f32);
+						},
+						_ => {
+							println!("Should never happen 2, remove this block after rigorous testing.");
+							return Err(ParsingError::NotAValue);
+						}
+					}
+				};
 
 				// Unboxing the value
 				match contains_value {
