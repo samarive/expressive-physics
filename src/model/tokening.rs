@@ -83,7 +83,7 @@ impl Tokenizer {
 							buffer.push(c);
 							TokenizerState::VariableName
 						}
-						'+' | '-' | '*' | '/' => {
+						'+' | '-' | '*' | '/' | '>' | '<' => {
 							// Two operators in a row throws UnexpectedOperator.
 							match r.last() {
 								Some(Token::Operator(_)) => TokenizerState::Error(TokenizerError::UnexpectedOperator(i)),
@@ -109,7 +109,7 @@ impl Tokenizer {
 							buffer.push(c);
 							TokenizerState::NumberBeforeDot
 						}
-						'+' | '-' | '*' | '/' => {
+						'+' | '-' | '*' | '/' | '>' | '<' => {
 							r.push(Self::parse_buffer(&mut buffer).unwrap());
 							r.push(Token::Operator(c));
 							TokenizerState::Initial
@@ -137,7 +137,7 @@ impl Tokenizer {
 							buffer.push(c);
 							TokenizerState::NumberAfterDot
 						}
-						'+' | '-' | '*' | '/' => {
+						'+' | '-' | '*' | '/' | '>' | '<' => {
 							r.push(Self::parse_buffer(&mut buffer).unwrap());
 							r.push(Token::Operator(c));
 							TokenizerState::Initial
@@ -160,7 +160,7 @@ impl Tokenizer {
 							buffer.push(c);
 							TokenizerState::VariableName
 						}
-						'+' | '-' | '*' | '/' => {
+						'+' | '-' | '*' | '/' | '>' | '<' => {
 							r.push(Self::parse_buffer(&mut buffer).unwrap());
 							r.push(Token::Operator(c));
 							TokenizerState::Initial

@@ -55,6 +55,8 @@ impl Parser {
 							'-' => Ok(left_hand - right_hand),
 							'/' => Ok(left_hand / right_hand),
 							'*' => Ok(left_hand * right_hand),
+							'>' => Ok((left_hand > right_hand) as i32 as f32),
+							'<' => Ok((left_hand < right_hand) as i32 as f32),
 							 _  => Err(ParsingError::UnknownOperator(op.0)) 
 						}
 					},
@@ -136,10 +138,12 @@ impl Parser {
 
 		// The higher the number, the higher the priority
 		let mut priorities = HashMap::<char, i32>::new();
-		priorities.insert('+', 0);
-		priorities.insert('-', 0);
-		priorities.insert('*', 1);
-		priorities.insert('/', 1);
+		priorities.insert('>', 0);
+		priorities.insert('<', 0);
+		priorities.insert('+', 1);
+		priorities.insert('-', 1);
+		priorities.insert('*', 2);
+		priorities.insert('/', 2);
 
 		let mut r = OperatorPosition ('\0', 0usize); // Result variable
 		let mut lowest_prio = 0i32;
