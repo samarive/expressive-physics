@@ -61,7 +61,26 @@ impl Application {
 	}
 
 	fn build_default_inspector() -> Widget {
-		Widget::new(Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)), WidgetVariant::Frame { outline_thickness: 1f32}).style(Style::default().background(Color::BLACK).foreground(Color::new(255, 255, 255, 100)))
+		Widget::new(
+			Layout::new(
+				Vector2::new(0f32,0f32),
+				Vector2::new(1f32, 1f32)
+			),
+			WidgetVariant::Frame { outline_thickness: 1f32}
+		)
+		.style(Style::default()
+		.background(Color::BLACK)
+		.foreground(Color::new(255, 255, 255, 100)))
+		.add_child(
+			Widget::new(
+				Layout::new(
+					Vector2::new(0f32, 0f32),
+					Vector2::new(1f32, 1f32)
+				),
+				WidgetVariant::Scroll {offset: 0f32}
+			)
+			.id("point scroll".to_string())
+		)
 	}
 
 	fn build_default_contextual_menu() -> Widget {
@@ -113,13 +132,25 @@ impl Application {
 		.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, -0.15f32), Vector2::new(0.8f32, 0.15f32)),
-				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration X".to_string(), registered: true}
+				WidgetVariant::TextInput {
+					selected: false,
+					text: String::new(),
+					placeholder: "Acceleration X".to_string(),
+					cursor: 0u32,
+					registered: true
+				}
 			).id("set ax".to_string())
 		)
 		.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, 0.05f32), Vector2::new(0.8f32, 0.15f32)),
-				WidgetVariant::TextInput {selected: false, text: String::new(), placeholder: "Acceleration Y".to_string(), registered: true}
+				WidgetVariant::TextInput {
+					selected: false,
+					text: String::new(),
+					placeholder: "Acceleration Y".to_string(),
+					cursor: 0u32,
+					registered: true
+				}
 			).id("set ay".to_string())
 		)
 		.add_child(
@@ -171,8 +202,15 @@ impl Application {
 
 		d.clear_background(Color::WHITE);
 
-		for point in self.world.iter_mut() {
-			point.draw(&mut d);
+		for (i, point) in self.world.iter_mut().enumerate() {
+			point.draw(
+				if i == self.selected_point as usize {
+					PointStyle::Cross
+				} else {
+					PointStyle::Circle
+				},
+				&mut d
+			);
 		}
 
 		self.inspector.draw_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut d);
@@ -202,27 +240,33 @@ impl Application {
 			self.world.push(new_point);
 
 			// Adding point handle in inspector
-			let children_count = self.inspector.get_children_count(1u32);
-			let h =  children_count as f32 * 0.1f32 - 0.4f32;
-			self.inspector.add_child_inplace(
-				Widget::new(
-					Layout::new(
-						Vector2::new(0f32, h),
-						Vector2::new(0.8f32, 0.1f32)
-					),
-					WidgetVariant::Button {state: ButtonState::Rest}
-				)
-				.id(format!("point{children_count}"))
-				.add_child(
-					Widget::new(
-						Layout::new(
-							Vector2::new(0f32, 0f32),
-							Vector2::new(1f32, 1f32)
-						),
-						WidgetVariant::Label {text: format!("point {children_count}").to_string(), font_size: 16i32}
-					).style(Style::default().background(Color::new(0, 0, 0, 0)))
-				)
-			);
+			match self.inspector.seek_in_tree("point scroll") {
+				Some(s) => {
+					let children_count = s.get_children_count(1u32);
+					let h =  children_count as f32 * 0.1f32 - 0.4f32;
+					s.add_child_inplace(
+						Widget::new(
+							Layout::new(
+								Vector2::new(0f32, h),
+								Vector2::new(0.8f32, 0.1f32)
+							),
+							WidgetVariant::Button {state: ButtonState::Rest}
+						)
+						.id(format!("point{children_count}"))
+						.add_child(
+							Widget::new(
+								Layout::new(
+									Vector2::new(0f32, 0f32),
+									Vector2::new(1f32, 1f32)
+								),
+								WidgetVariant::Label {text: format!("point {children_count}").to_string(), font_size: 16i32}
+							).style(Style::default().background(Color::new(0, 0, 0, 0)))
+						)	
+					)
+				},
+				None => println!("Error: No scroll menu in inspector, what happened ?")
+			}
+			
 		}
 
 		if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {

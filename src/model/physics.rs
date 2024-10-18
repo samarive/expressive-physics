@@ -11,6 +11,11 @@ pub struct Force {
 	pub y: Vec::<Token>
 }
 
+pub enum PointStyle {
+	Circle,
+	Cross
+}
+
 pub struct Point {
 	// Simulation data
 	position: Vector2,
@@ -118,7 +123,7 @@ impl Point {
 		}
 	}
 
-	pub fn draw(&mut self, handle: &mut RaylibDrawHandle) {
+	pub fn draw(&mut self, style: PointStyle, handle: &mut RaylibDrawHandle) {
 	
 		if let Some(t) = &mut self.trail {
 			if t.len() > 0 {
@@ -132,7 +137,14 @@ impl Point {
 		
 		}
 
-		handle.draw_circle_v(self.position, 5f32, Color::BLACK);
+		match style {
+			PointStyle::Circle => handle.draw_circle_v(self.position, 5f32, Color::BLACK),
+			PointStyle::Cross => {
+				const CROSS_SIZE: f32 = 5f32;
+				handle.draw_line_ex(self.position - Vector2::new(CROSS_SIZE, CROSS_SIZE), self.position + Vector2::new(CROSS_SIZE, CROSS_SIZE), 3f32, Color::RED);
+				handle.draw_line_ex(self.position - Vector2::new(-CROSS_SIZE, CROSS_SIZE), self.position + Vector2::new(-CROSS_SIZE, CROSS_SIZE), 3f32, Color::RED);
+			}
+		}
 	}
 
 	fn only_contains_valid_variables(tokens: &Vec::<Token>) -> bool {

@@ -68,7 +68,8 @@ pub enum WidgetVariant {
 	Frame {outline_thickness: f32},
 	Label {text: String, font_size: i32},
 	Button {state: ButtonState},
-	TextInput {selected: bool, placeholder: String, text: String, registered: bool}
+	TextInput {selected: bool, placeholder: String, text: String, cursor: u32, registered: bool},
+	Scroll {offset: f32}
 }
 
 
@@ -291,7 +292,7 @@ impl Widget {
 	pub fn check_event_in_tree(&mut self, parent_layout: &Layout, rl: &mut RaylibHandle) {
 		if self.hidden {return;} // Disable events for hiddent widgets and their children
 
-		let true_coords = self.get_true_coords(parent_layout);
+		let mut true_coords = self.get_true_coords(parent_layout);
 
 		let mouse = rl.get_mouse_position();
 
@@ -299,8 +300,12 @@ impl Widget {
 			WidgetVariant::Button {state} => {
 				Self::handle_events_as_button(state, &true_coords, mouse, rl);
 			},
-			WidgetVariant::TextInput {selected, text, registered, ..} => {
-				Self::handle_events_as_text_input(selected, text, registered, &true_coords, mouse, rl);
+			WidgetVariant::TextInput {selected, text, registered, cursor, ..} => {
+				Self::handle_events_as_text_input(selected, text, registered, cursor, &true_coords, mouse, rl);
+			},
+			WidgetVariant::Scroll {offset} => {
+				Self::handle_events_as_scroll(offset, &true_coords, mouse, rl);
+				true_coords.center.y += *offset;
 			}
 			_ => {}
 		}
@@ -315,7 +320,7 @@ impl Widget {
 	pub fn draw_tree(&self, parent_layout: &Layout, draw_handle: &mut RaylibDrawHandle) {
 		if self.hidden {return;} // Hidden widgets and their children don't get drawn.
 		
-		let true_coords = self.get_true_coords(parent_layout);
+		let mut true_coords = self.get_true_coords(parent_layout);
 
 		// true_coords as {left, top, width, height} format.
 		let coords_rect = Rectangle::new(
@@ -334,9 +339,16 @@ impl Widget {
 			},
 			WidgetVariant::Button {state, ..} => {
 				self.draw_as_button(state, coords_rect, draw_handle);
-			}
-			WidgetVariant::TextInput {selected, placeholder, text, ..} => {
-				self.draw_as_text_input(*selected, placeholder, text, coords_rect, draw_handle);
+			},
+			WidgetVariant::TextInput {selected, placeholder, text, cursor, ..} => {
+				self.draw_as_text_input(*selected, placeholder, text, cursor, coords_rect, draw_handle);
+			},
+			WidgetVariant::Scroll {offset} => {
+				// TODO: Draw scrollbar on WidgetVariant::Scroll
+				
+				// Draw here, not after next line.
+				// (or else scrollbar will be offseted too)
+				true_coords.center.y += offset;
 			}
 		}
 
@@ -421,8 +433,9 @@ impl Widget {
 		);
 	}
 
-	fn draw_as_text_input(&self, selected: bool, placeholder: &str, text: &str, coords_rect: Rectangle, draw_handle: &mut RaylibDrawHandle) {
+	fn draw_as_text_input(&self, selected: bool, placeholder: &str, text: &str, cursor: &u32, coords_rect: Rectangle, draw_handle: &mut RaylibDrawHandle) {
 		draw_handle.draw_rectangle_rec(coords_rect, self.style.background);
+
 		draw_handle.draw_text(
 			if text.is_empty() {placeholder} else {text},
 			coords_rect.x as i32 + (0.05 * coords_rect.width as f32) as i32, coords_rect.y as i32,
@@ -430,6 +443,15 @@ impl Widget {
 			if text.is_empty() {self.style.action} else {self.style.foreground}
 		);
 		
+		if selected {
+			let cursor_offset = draw_handle.measure_text(
+				&text[0..*cursor as usize],
+				coords_rect.height as i32
+			) as f32 + 0.05f32 * coords_rect.width as f32;
+
+			draw_handle.draw_rectangle((coords_rect.x + cursor_offset) as i32, coords_rect.y as i32, 2i32, coords_rect.height as i32, Color::BLACK);
+		}
+
 		draw_handle.draw_rectangle_lines(
 			coords_rect.x as i32, coords_rect.y as i32,
 			coords_rect.width as i32, coords_rect.height as i32,
@@ -438,6 +460,13 @@ impl Widget {
 	}
 
 	// Events
+
+	fn handle_events_as_scroll(offset: &mut f32, true_coords: &Layout, mouse: Vector2, rl: &mut RaylibHandle) {
+
+		if true_coords.contains(mouse) {
+			*offset += rl.get_mouse_wheel_move() * 10f32;
+		}
+	}
 
 	fn handle_events_as_button(state: &mut ButtonState, true_coords: &Layout, mouse: Vector2, rl: &mut RaylibHandle) {
 		if true_coords.contains(mouse) {
@@ -462,9 +491,21 @@ impl Widget {
 		}
 
 	}
-	fn handle_events_as_text_input(selected: &mut bool, text: &mut String, registered: &mut bool, true_coords: &Layout,mouse: Vector2, rl: &mut RaylibHandle) {
+	fn handle_events_as_text_input(selected: &mut bool, text: &mut String, registered: &mut bool, cursor: &mut u32, true_coords: &Layout, mouse: Vector2, rl: &mut RaylibHandle) {
 		if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && true_coords.contains(mouse) {
-			*selected = true;
+			if *selected {
+				let left = true_coords.center.x - 9f32 * true_coords.size.x / 20f32;
+				let character_size = rl.measure_text(text, true_coords.size.y as i32) as f32 / text.len() as f32;
+				if left <= mouse.x {
+					*cursor = ((mouse.x - left) / character_size) as u32;
+					if *cursor as usize > text.len() {
+						*cursor = text.len() as u32;
+					}
+				}
+			} 
+			else {
+				*selected = true;
+			}
 		}
 		else if rl.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) {
 			*selected = false;
@@ -474,13 +515,31 @@ impl Widget {
 		if *selected {
 			// Keyboard handling
 			match rl.get_char_pressed() {
-				Some(c) => text.push(c),
+				Some(c) => {
+					text.insert(*cursor as usize, c);
+					*cursor += 1u32;
+				},
 				None => if let Some(key) = rl.get_key_pressed() {
 					match key {
-						KeyboardKey::KEY_BACKSPACE => {text.pop();},
+						KeyboardKey::KEY_BACKSPACE => {
+							if *cursor != 0u32 {
+								*cursor -= 1u32;
+								text.remove(*cursor as usize);
+							}
+						},
 						KeyboardKey::KEY_ENTER => {
 							*selected = false;
 							*registered = false;
+						},
+						KeyboardKey::KEY_LEFT => {
+							if *cursor != 0u32 {
+								*cursor -= 1u32;
+							}
+						},
+						KeyboardKey::KEY_RIGHT => {
+							if *cursor as usize != text.len() {
+								*cursor += 1u32;
+							}
 						}
 						_ => {}
 					}
