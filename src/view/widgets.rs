@@ -26,6 +26,10 @@ impl WidgetTree {
 	pub fn seek(&mut self, id: &'static str) -> Option<&mut Widget> {
 		self.root.seek_in_tree(id)
 	}
+
+	pub fn get_entry(&self, id: &'static str) -> Option<String> {
+		self.root.get_entry_in_tree(id)
+	}
 } 
 
 
@@ -39,6 +43,13 @@ impl Layout {
 		Layout {
 			center,
 			size
+		}
+	}
+
+	pub fn default() -> Self {
+		Layout {
+			center: Vector2::zero(),
+			size: Vector2::one()
 		}
 	}
 

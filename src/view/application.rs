@@ -25,14 +25,21 @@ pub struct Application {
 	selected_point: i32,
 
 	forces: HashMap::<String, Force>,
+	selected_force: String,
 
 	rl_handle: RaylibHandle,
 	rl_thread: RaylibThread,
 	
+	// TODO: Put all of those in a struct with an iterator
+	// so that we could just iterate when calling the same function
+	// on every WidgetTree.
 	inspector: WidgetTree,
 	force_menu: WidgetTree,
 	contextual_menu: WidgetTree,
-	force_inspector: WidgetTree
+	force_inspector: WidgetTree,
+	force_naming: WidgetTree,
+
+	force_menu_just_appeared: bool
 }
 
 impl Application {
@@ -48,6 +55,7 @@ impl Application {
 			selected_point: -1i32,
 
 			forces: HashMap::<String, Force>::new(),
+			selected_force: String::new(),
 
 			rl_handle,
 			rl_thread,
@@ -67,7 +75,13 @@ impl Application {
 			force_inspector: WidgetTree::new(
 				Self::build_default_force_inspector(),
 				Layout::new(Vector2::new(700f32, 225f32), Vector2::new(200f32, 400f32))
-			)
+			),
+			force_naming: WidgetTree::new(
+				Self::build_default_force_naming(),
+				Layout::new(Vector2::new(400f32, 225f32), Vector2::new(600f32, 100f32))
+			),
+
+			force_menu_just_appeared: false
 
 		}
 	}
@@ -154,14 +168,11 @@ impl Application {
 		.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.2f32)),
-				WidgetVariant::TextInput {
-					placeholder: "Force name".to_string(),
+				WidgetVariant::Label {
 					text: String::new(),
-					cursor: 0u32,
-					registered: true,
-					selected: false
+					font_size: 32i32
 				}
-			).id("force name".to_string())
+			).id("title".to_string())
 		)
 		.add_child(
 			Widget::new(
@@ -226,6 +237,67 @@ impl Application {
 		)
 	}
 
+	fn build_default_force_naming() -> Widget {
+		Widget::new(
+			Layout::default(),
+			WidgetVariant::Frame {outline_thickness: 1f32}
+		)
+		.style(Style::default()
+		.background(Color::BLACK)
+		.foreground(Color::new(255, 255, 255, 100)))
+		.hidden()
+		.add_child(
+			Widget::new(
+				Layout::new(
+					Vector2::new(0f32, 0f32),
+					Vector2::new(0.8f32, 0.3f32)
+				),
+				WidgetVariant::TextInput {
+					placeholder: String::from("Force name"),
+					text: String::new(),
+					registered: true,
+					selected: false,
+					cursor: 0u32
+				}
+			)
+			.id(String::from("name"))
+		)
+		.add_child(
+			Widget::new(
+				Layout::new(
+					Vector2::new(-0.25f32, 0.35f32),
+					Vector2::new(0.2f32, 0.2f32)
+				),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			)
+			.style(Style::default().action(Color::GREEN))
+			.id(String::from("create"))
+			.add_child(
+				Widget::new(
+					Layout::default(),
+					WidgetVariant::Label {text: String::from("Create"), font_size: 16i32}
+				)
+			)
+		)
+		.add_child(
+			Widget::new(
+				Layout::new(
+					Vector2::new(0.25f32, 0.35f32),
+					Vector2::new(0.2f32, 0.2f32)
+				),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			)
+			.id(String::from("cancel"))
+			.style(Style::default().action(Color::RED))
+			.add_child(
+				Widget::new(
+					Layout::default(),
+					WidgetVariant::Label {text: String::from("Cancel"), font_size: 16i32}
+				)
+			)
+		)
+	}
+
 	pub fn mainloop(&mut self) {
 		while !self.rl_handle.window_should_close() {
 
@@ -246,6 +318,7 @@ impl Application {
 		self.inspector.check_event(&mut self.rl_handle);
 		self.force_inspector.check_event(&mut self.rl_handle);
 		self.force_menu.check_event(&mut self.rl_handle);
+		self.force_naming.check_event(&mut self.rl_handle);
 		self.contextual_menu.check_event(&mut self.rl_handle);
 
 		// Special behaviours
@@ -253,6 +326,7 @@ impl Application {
 		self.inspector_events();
 		self.force_inspector_events();
 		self.force_menu_events();
+		self.force_naming_events();
 				
 	}
 
@@ -275,17 +349,19 @@ impl Application {
 		self.inspector.draw(&mut d);
 		self.force_inspector.draw(&mut d);
 		self.force_menu.draw(&mut d);
+		self.force_naming.draw(&mut d);
 		self.contextual_menu.draw(&mut d);
 	}
 
 
-	fn show_force_menu(&mut self, id: i32) {
+	fn show_force_menu(&mut self, name: String) {
 		if let Some(title) = self.force_menu.seek("title") {
 			if let WidgetVariant::Label {text, ..} = title.get_variant() {
-				*text = format!("Point properties {id}");
+				*text = name;
 			}
 		}
 		self.force_menu.root.set_visible(true);
+		self.force_menu_just_appeared = true;
 	}
 
 	fn contextual_menu_events(&mut self) {
@@ -301,12 +377,9 @@ impl Application {
 				}
 			);
 
-			match self.force_inspector.seek("force scroll") {
-				Some (s) => {
-					Self::add_button_to_scroll(s, |_: u32| String::from("test"));
-				},
-				None => println!("Error: No scroll menu in force inspector, what happened ?")
-			}
+			self.force_naming.root.set_visible(true);
+			self.contextual_menu.root.set_visible(false);
+				
 		}
 		if contextual_activations.contains(&String::from("add point")) {
 			
@@ -335,33 +408,27 @@ impl Application {
 	}
 
 	fn force_inspector_events(&mut self) {
-		// TODO
+		let activations = self.force_inspector.root.get_all_activations();
+		
+		for id in activations.iter() {
+			self.show_force_menu(id.clone());
+		}
 	}
 
 	fn inspector_events(&mut self) {
 		let inspector_activations = self.inspector.root.get_all_activations();
 
-		let mut handle_activated = false;
 		for id in inspector_activations.iter() {
 			if id.starts_with("point") {
 				match id[5..].parse::<i32>() {
 					Ok(v) =>  {
 						self.selected_point = v;
-						self.show_force_menu(v);
-						handle_activated = true;
+						// TODO: Show point menu
+						// self.show_force_menu(v);
 					}
 					Err(_) => println!("Ill formated point name, expected i32 after column 5.")
 				}
 			}
-		}
-
-		if 
-			!self.force_menu.bounds.contains(self.rl_handle.get_mouse_position()) &&
-			self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) &&
-			!handle_activated 
-		{
-			self.force_menu.root.set_visible(false);
-			self.selected_point = -1i32;
 		}
 	}
 
@@ -386,6 +453,38 @@ impl Application {
 				(_, Err(e)) => println!("Error on Y expression : {e:?}")
 			}
 					
+		}
+
+		if 
+			!self.force_menu.bounds.contains(self.rl_handle.get_mouse_position()) &&
+			self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) &&
+			!self.force_menu_just_appeared
+		{
+			self.force_menu.root.set_visible(false);
+			self.selected_point = -1i32;
+		} else {
+			self.force_menu_just_appeared = false;
+		}
+	}
+
+	fn force_naming_events(&mut self) {
+		let activations = self.force_naming.root.get_all_activations();
+
+		for id in activations {
+			if id == "cancel" {
+				self.force_naming.root.set_visible(false);
+			} else if id == "create" {
+				match self.force_inspector.seek("force scroll") {
+					Some (s) => {
+						Self::add_button_to_scroll(s, |_: u32| match self.force_naming.get_entry("name") {
+							Some(name) => name,
+							None => String::from("Unknown")
+						});
+						self.force_naming.root.set_visible(false);
+					},
+					None => println!("Error: No scroll menu in force inspector, what happened ?")
+				}
+			}
 		}
 	}
 
