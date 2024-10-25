@@ -30,8 +30,9 @@ pub struct Application {
 	rl_thread: RaylibThread,
 	
 	inspector: WidgetTree,
-	point_menu: WidgetTree,
+	force_menu: WidgetTree,
 	contextual_menu: WidgetTree,
+	force_inspector: WidgetTree
 }
 
 impl Application {
@@ -59,9 +60,13 @@ impl Application {
 				Self::build_default_contextual_menu(),
 				Layout::new(Vector2::new(600f32, 150f32), Vector2::new(100f32, 200f32))
 			),
-			point_menu: WidgetTree::new(
-				Self::build_default_point_menu(),
-				Layout::new(Vector2::new(600f32, 100f32), Vector2::new(400f32, 200f32))
+			force_menu: WidgetTree::new(
+				Self::build_default_force_menu(),
+				Layout::new(Vector2::new(400f32, 225f32), Vector2::new(600f32, 200f32))
+			),
+			force_inspector: WidgetTree::new(
+				Self::build_default_force_inspector(),
+				Layout::new(Vector2::new(700f32, 225f32), Vector2::new(200f32, 400f32))
 			)
 
 		}
@@ -115,9 +120,25 @@ impl Application {
 			)
 
 		)
+		.add_child(
+			Widget::new(
+				Layout::new(Vector2::new(0f32, -0.34f32), Vector2::new(1f32, 0.1f32)),
+				WidgetVariant::Button {
+					state: ButtonState::Rest
+				}
+			).style(Style::default().foreground(Color::GREEN).action(Color::GRAY)).id("add force".to_string())
+			.add_child(
+				Widget::new(
+					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(1f32, 1f32)),
+					WidgetVariant::Label {text: "Add force".to_string(), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)
+
+		)
+
 	}
 
-	fn build_default_point_menu() -> Widget {
+	fn build_default_force_menu() -> Widget {
 		Widget::new(
 			Layout::new(
 				Vector2::new(0f32, 0f32),
@@ -133,8 +154,14 @@ impl Application {
 		.add_child(
 			Widget::new(
 				Layout::new(Vector2::new(0f32, -0.4f32), Vector2::new(0.8f32, 0.2f32)),
-				WidgetVariant::Label {text: format!("Point properties"), font_size: 24i32}
-			).id("title".to_string())
+				WidgetVariant::TextInput {
+					placeholder: "Force name".to_string(),
+					text: String::new(),
+					cursor: 0u32,
+					registered: true,
+					selected: false
+				}
+			).id("force name".to_string())
 		)
 		.add_child(
 			Widget::new(
@@ -176,6 +203,29 @@ impl Application {
 		
 	}
 
+	fn build_default_force_inspector() -> Widget {
+		Widget::new(
+			Layout::new(
+				Vector2::new(0f32,0f32),
+				Vector2::new(1f32, 1f32)
+			),
+			WidgetVariant::Frame { outline_thickness: 1f32}
+		)
+		.style(Style::default()
+		.background(Color::BLACK)
+		.foreground(Color::new(255, 255, 255, 100)))
+		.add_child(
+			Widget::new(
+				Layout::new(
+					Vector2::new(0f32, 0f32),
+					Vector2::new(1f32, 1f32)
+				),
+				WidgetVariant::Scroll {offset: 0f32}
+			)
+			.id("force scroll".to_string())
+		)
+	}
+
 	pub fn mainloop(&mut self) {
 		while !self.rl_handle.window_should_close() {
 
@@ -194,13 +244,15 @@ impl Application {
 
 		// Make widget trees hear events
 		self.inspector.check_event(&mut self.rl_handle);
-		self.point_menu.check_event(&mut self.rl_handle);
+		self.force_inspector.check_event(&mut self.rl_handle);
+		self.force_menu.check_event(&mut self.rl_handle);
 		self.contextual_menu.check_event(&mut self.rl_handle);
 
 		// Special behaviours
 		self.contextual_menu_events();
 		self.inspector_events();
-		self.point_menu_events();
+		self.force_inspector_events();
+		self.force_menu_events();
 				
 	}
 
@@ -221,25 +273,42 @@ impl Application {
 		}
 
 		self.inspector.draw(&mut d);
-		self.point_menu.draw(&mut d);
+		self.force_inspector.draw(&mut d);
+		self.force_menu.draw(&mut d);
 		self.contextual_menu.draw(&mut d);
 	}
 
 
-	fn show_point_menu(&mut self, id: i32) {
-		if let Some(title) = self.point_menu.seek("title") {
+	fn show_force_menu(&mut self, id: i32) {
+		if let Some(title) = self.force_menu.seek("title") {
 			if let WidgetVariant::Label {text, ..} = title.get_variant() {
 				*text = format!("Point properties {id}");
 			}
 		}
-		self.point_menu.root.set_visible(true);
+		self.force_menu.root.set_visible(true);
 	}
 
 	fn contextual_menu_events(&mut self) {
 		
 		let contextual_activations = self.contextual_menu.root.get_all_activations();
 
-		if contextual_activations.contains(&"add point".to_string()) {
+		if contextual_activations.contains(&String::from("add force")) {
+			self.forces.insert(
+				String::from("test"),
+				Force {
+					x: Vec::<Token>::new(),
+					y: Vec::<Token>::new()
+				}
+			);
+
+			match self.force_inspector.seek("force scroll") {
+				Some (s) => {
+					Self::add_button_to_scroll(s, |_: u32| String::from("test"));
+				},
+				None => println!("Error: No scroll menu in force inspector, what happened ?")
+			}
+		}
+		if contextual_activations.contains(&String::from("add point")) {
 			
 			// Adding point in world
 			let mut new_point = Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y));
@@ -249,27 +318,7 @@ impl Application {
 			// Adding point handle in inspector
 			match self.inspector.seek("point scroll") {
 				Some(s) => {
-					let children_count = s.get_children_count(1u32);
-					let h =  children_count as f32 * 0.1f32 - 0.4f32;
-					s.add_child_inplace(
-						Widget::new(
-							Layout::new(
-								Vector2::new(0f32, h),
-								Vector2::new(0.8f32, 0.1f32)
-							),
-							WidgetVariant::Button {state: ButtonState::Rest}
-						)
-						.id(format!("point{children_count}"))
-						.add_child(
-							Widget::new(
-								Layout::new(
-									Vector2::new(0f32, 0f32),
-									Vector2::new(1f32, 1f32)
-								),
-								WidgetVariant::Label {text: format!("point {children_count}").to_string(), font_size: 16i32}
-							).style(Style::default().background(Color::new(0, 0, 0, 0)))
-						)	
-					)
+					Self::add_button_to_scroll(s, |x: u32| format!("point{x}"));
 				},
 				None => println!("Error: No scroll menu in inspector, what happened ?")
 			}
@@ -285,6 +334,10 @@ impl Application {
 		}
 	}
 
+	fn force_inspector_events(&mut self) {
+		// TODO
+	}
+
 	fn inspector_events(&mut self) {
 		let inspector_activations = self.inspector.root.get_all_activations();
 
@@ -294,7 +347,7 @@ impl Application {
 				match id[5..].parse::<i32>() {
 					Ok(v) =>  {
 						self.selected_point = v;
-						self.show_point_menu(v);
+						self.show_force_menu(v);
 						handle_activated = true;
 					}
 					Err(_) => println!("Ill formated point name, expected i32 after column 5.")
@@ -303,23 +356,23 @@ impl Application {
 		}
 
 		if 
-			!self.point_menu.bounds.contains(self.rl_handle.get_mouse_position()) &&
+			!self.force_menu.bounds.contains(self.rl_handle.get_mouse_position()) &&
 			self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) &&
 			!handle_activated 
 		{
-			self.point_menu.root.set_visible(false);
+			self.force_menu.root.set_visible(false);
 			self.selected_point = -1i32;
 		}
 	}
 
-	fn point_menu_events(&mut self) {
+	fn force_menu_events(&mut self) {
 
-		let point_menu_activations = self.point_menu.root.get_all_activations();
+		let force_menu_activations = self.force_menu.root.get_all_activations();
 
-		if point_menu_activations.contains(&"apply forces".to_string()) {
+		if force_menu_activations.contains(&"apply forces".to_string()) {
 			match (
-				Tokenizer::tokenize(&self.point_menu.root.get_entry_in_tree("set ax").unwrap_or("0".to_string())),
-				Tokenizer::tokenize(&self.point_menu.root.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
+				Tokenizer::tokenize(&self.force_menu.root.get_entry_in_tree("set ax").unwrap_or("0".to_string())),
+				Tokenizer::tokenize(&self.force_menu.root.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
 			) {
 				(Ok(tx), Ok(ty)) => {
 					match self.world.get_mut(self.selected_point as usize) {
@@ -334,6 +387,30 @@ impl Application {
 			}
 					
 		}
+	}
+
+	fn add_button_to_scroll(s: &mut Widget, t: impl Fn(u32) -> String) {
+		let children_count = s.get_children_count(1u32);
+		let h =  children_count as f32 * 0.1f32 - 0.4f32;
+		s.add_child_inplace(
+			Widget::new(
+				Layout::new(
+					Vector2::new(0f32, h),
+					Vector2::new(0.8f32, 0.1f32)
+				),
+				WidgetVariant::Button {state: ButtonState::Rest}
+			)
+			.id(t(children_count))
+			.add_child(
+				Widget::new(
+					Layout::new(
+						Vector2::new(0f32, 0f32),
+						Vector2::new(1f32, 1f32)
+					),
+					WidgetVariant::Label {text: t(children_count), font_size: 16i32}
+				).style(Style::default().background(Color::new(0, 0, 0, 0)))
+			)	
+		)
 	}
 
 }
