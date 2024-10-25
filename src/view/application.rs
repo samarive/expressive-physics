@@ -1,5 +1,6 @@
 //! Encapsule tout le code nécessaire au lancement et à la gestion de l'application.
 
+use std::collections::HashMap;
 use raylib::prelude::*;
 use super::super::model::physics::*;
 use super::widgets::*;
@@ -23,16 +24,14 @@ pub struct Application {
 	world: World,
 	selected_point: i32,
 
+	forces: HashMap::<String, Force>,
+
 	rl_handle: RaylibHandle,
 	rl_thread: RaylibThread,
 	
-	inspector: Widget,
-	point_menu: Widget,
-	contextual_menu: Widget,
-
-	inspector_layout: Layout,
-	point_menu_layout: Layout,
-	contextual_menu_layout: Layout
+	inspector: WidgetTree,
+	point_menu: WidgetTree,
+	contextual_menu: WidgetTree,
 }
 
 impl Application {
@@ -47,16 +46,24 @@ impl Application {
 			world: World::new(),
 			selected_point: -1i32,
 
+			forces: HashMap::<String, Force>::new(),
+
 			rl_handle,
 			rl_thread,
 			
-			      inspector: Self::build_default_inspector(),
-			contextual_menu: Self::build_default_contextual_menu(),
-			     point_menu: Self::build_default_point_menu(),
-			
-			      inspector_layout: Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)),
-				 point_menu_layout: Layout::new(Vector2::new(600f32, 100f32), Vector2::new(400f32, 200f32)),
-			contextual_menu_layout: Layout::new(Vector2::new(600f32, 150f32), Vector2::new(100f32, 200f32))
+			inspector: WidgetTree::new(
+			  	Self::build_default_inspector(),
+			  	Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32))
+			),
+			contextual_menu: WidgetTree::new(
+				Self::build_default_contextual_menu(),
+				Layout::new(Vector2::new(600f32, 150f32), Vector2::new(100f32, 200f32))
+			),
+			point_menu: WidgetTree::new(
+				Self::build_default_point_menu(),
+				Layout::new(Vector2::new(600f32, 100f32), Vector2::new(400f32, 200f32))
+			)
+
 		}
 	}
 
@@ -186,9 +193,9 @@ impl Application {
 	fn handle_events(&mut self) {
 
 		// Make widget trees hear events
-		self.inspector.check_event_in_tree(&self.inspector_layout, &mut self.rl_handle);
-		self.point_menu.check_event_in_tree(&self.point_menu_layout, &mut self.rl_handle);
-		self.contextual_menu.check_event_in_tree(&self.contextual_menu_layout, &mut self.rl_handle);
+		self.inspector.check_event(&mut self.rl_handle);
+		self.point_menu.check_event(&mut self.rl_handle);
+		self.contextual_menu.check_event(&mut self.rl_handle);
 
 		// Special behaviours
 		self.contextual_menu_events();
@@ -213,24 +220,24 @@ impl Application {
 			);
 		}
 
-		self.inspector.draw_tree(&Layout::new(Vector2::new(100f32, 225f32), Vector2::new(200f32, 400f32)), &mut d);
-		self.point_menu.draw_tree(&Layout::new(Vector2::new(600f32, 100f32), Vector2::new(400f32, 200f32)), &mut d);
-		self.contextual_menu.draw_tree(&self.contextual_menu_layout, &mut d);
+		self.inspector.draw(&mut d);
+		self.point_menu.draw(&mut d);
+		self.contextual_menu.draw(&mut d);
 	}
 
 
 	fn show_point_menu(&mut self, id: i32) {
-		if let Some(title) = self.point_menu.seek_in_tree("title") {
+		if let Some(title) = self.point_menu.seek("title") {
 			if let WidgetVariant::Label {text, ..} = title.get_variant() {
 				*text = format!("Point properties {id}");
 			}
 		}
-		self.point_menu.set_visible(true);
+		self.point_menu.root.set_visible(true);
 	}
 
 	fn contextual_menu_events(&mut self) {
 		
-		let contextual_activations = self.contextual_menu.get_all_activations();
+		let contextual_activations = self.contextual_menu.root.get_all_activations();
 
 		if contextual_activations.contains(&"add point".to_string()) {
 			
@@ -240,7 +247,7 @@ impl Application {
 			self.world.push(new_point);
 
 			// Adding point handle in inspector
-			match self.inspector.seek_in_tree("point scroll") {
+			match self.inspector.seek("point scroll") {
 				Some(s) => {
 					let children_count = s.get_children_count(1u32);
 					let h =  children_count as f32 * 0.1f32 - 0.4f32;
@@ -270,16 +277,16 @@ impl Application {
 		}
 
 		if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_RIGHT) {
-			self.contextual_menu_layout.center = self.rl_handle.get_mouse_position() + self.contextual_menu_layout.size/2f32;
-			self.contextual_menu.set_visible(true);
+			self.contextual_menu.bounds.center = self.rl_handle.get_mouse_position() + self.contextual_menu.bounds.size/2f32;
+			self.contextual_menu.root.set_visible(true);
 		}
-		if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && !self.contextual_menu_layout.contains(self.rl_handle.get_mouse_position()) {
-			self.contextual_menu.set_visible(false);
+		if self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) && !self.contextual_menu.bounds.contains(self.rl_handle.get_mouse_position()) {
+			self.contextual_menu.root.set_visible(false);
 		}
 	}
 
 	fn inspector_events(&mut self) {
-		let inspector_activations = self.inspector.get_all_activations();
+		let inspector_activations = self.inspector.root.get_all_activations();
 
 		let mut handle_activated = false;
 		for id in inspector_activations.iter() {
@@ -296,30 +303,28 @@ impl Application {
 		}
 
 		if 
-			!self.point_menu_layout.contains(self.rl_handle.get_mouse_position()) &&
+			!self.point_menu.bounds.contains(self.rl_handle.get_mouse_position()) &&
 			self.rl_handle.is_mouse_button_pressed(MouseButton::MOUSE_BUTTON_LEFT) &&
 			!handle_activated 
 		{
-			self.point_menu.set_visible(false);
+			self.point_menu.root.set_visible(false);
 			self.selected_point = -1i32;
 		}
 	}
 
 	fn point_menu_events(&mut self) {
 
-		let point_menu_activations = self.point_menu.get_all_activations();
+		let point_menu_activations = self.point_menu.root.get_all_activations();
 
 		if point_menu_activations.contains(&"apply forces".to_string()) {
 			match (
-				Tokenizer::tokenize(&self.point_menu.get_entry_in_tree("set ax").unwrap_or("0".to_string())),
-				Tokenizer::tokenize(&self.point_menu.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
+				Tokenizer::tokenize(&self.point_menu.root.get_entry_in_tree("set ax").unwrap_or("0".to_string())),
+				Tokenizer::tokenize(&self.point_menu.root.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
 			) {
 				(Ok(tx), Ok(ty)) => {
 					match self.world.get_mut(self.selected_point as usize) {
 						Some(point) => {
-							if let Err(e) = point.add_force("test", Force {x: tx, y: ty}) {
-								println!("Can't add force : {e:?}.")
-							}
+							// TODO: ADD FORCE
 						},
 						None => println!("Error : Trying to set forces of point {} which doesn't exist.", self.selected_point)
 					}

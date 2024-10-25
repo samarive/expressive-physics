@@ -3,6 +3,32 @@
 
 use raylib::prelude::*;
 
+pub struct WidgetTree {
+	pub root: Widget,
+	pub bounds: Layout
+}
+impl WidgetTree {
+	pub fn new(root: Widget, bounds: Layout) -> Self {
+		Self {
+			root,
+			bounds
+		}
+	}
+
+	pub fn check_event(&mut self, rl: &mut RaylibHandle) {
+		self.root.check_event_in_tree(&self.bounds, rl);
+	}
+
+	pub fn draw(&self, rl: &mut RaylibDrawHandle) {
+		self.root.draw_tree(&self.bounds, rl);
+	}
+
+	pub fn seek(&mut self, id: &'static str) -> Option<&mut Widget> {
+		self.root.seek_in_tree(id)
+	}
+} 
+
+
 #[derive(Debug)]
 pub struct Layout {
 	pub center: Vector2,
