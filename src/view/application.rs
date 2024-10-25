@@ -357,9 +357,22 @@ impl Application {
 	fn show_force_menu(&mut self, name: String) {
 		if let Some(title) = self.force_menu.seek("title") {
 			if let WidgetVariant::Label {text, ..} = title.get_variant() {
-				*text = name;
+				*text = name.clone();
 			}
 		}
+
+		match self.forces.get(&name) {
+			Some(f) => {
+				if let Some(ax) = self.force_menu.seek("set ax") {
+					if let WidgetVariant::TextInput {text, ..} = ax.get_variant() {
+						*text = Tokenizer::untokenize(&f.x);
+						println!("{text}");
+					}
+				}
+			},
+			None => println!("Error: force {} doen't exist in model.", name)
+		}
+
 		self.force_menu.root.set_visible(true);
 		self.force_menu_just_appeared = true;
 	}
@@ -424,7 +437,6 @@ impl Application {
 					Ok(v) =>  {
 						self.selected_point = v;
 						// TODO: Show point menu
-						// self.show_force_menu(v);
 					}
 					Err(_) => println!("Ill formated point name, expected i32 after column 5.")
 				}
@@ -476,10 +488,12 @@ impl Application {
 			} else if id == "create" {
 				match self.force_inspector.seek("force scroll") {
 					Some (s) => {
-						Self::add_button_to_scroll(s, |_: u32| match self.force_naming.get_entry("name") {
-							Some(name) => name,
+						let name = match self.force_naming.get_entry("name") {
+							Some(n) => n,
 							None => String::from("Unknown")
-						});
+						};
+						self.forces.insert(name.clone(), Force::new());
+						Self::add_button_to_scroll(s, |_: u32| name.clone());
 						self.force_naming.root.set_visible(false);
 					},
 					None => println!("Error: No scroll menu in force inspector, what happened ?")

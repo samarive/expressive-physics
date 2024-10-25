@@ -12,6 +12,15 @@ pub struct Force {
 	pub y: Vec::<Token>
 }
 
+impl Force {
+	pub fn new() -> Self {
+		Force {
+			x: Vec::<Token>::new(),
+			y: Vec::<Token>::new()
+		}
+	}
+}
+
 pub enum PointStyle {
 	Circle,
 	Cross

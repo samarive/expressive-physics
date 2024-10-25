@@ -204,4 +204,20 @@ impl Tokenizer {
 			Ok(r)
 		}
 	}
-}
+
+	pub fn untokenize(tokens: &Vec::<Token>) -> String {
+		
+		let mut result = String::new();
+		for token in tokens {
+			match token {
+				Token::Value (v) => result.push_str(&v.to_string()),
+				Token::Variable (v) => result.push_str(&v),
+				Token::Parenthesis(true) => result.push('('),
+				Token::Parenthesis(false) => result.push(')'),
+				Token::Operator(o) => result.push(*o)
+			}
+		}
+
+		result
+	}
+ }
