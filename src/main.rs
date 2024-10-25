@@ -12,7 +12,7 @@ mod view;
 use view::application::Application;
 
 fn main() {
-
+    
     let mut app = Application::realize();
 
     app.mainloop();

@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::rc::Rc;
+use std::cell::RefCell;
 use raylib::prelude::*;
 use super::super::model::physics::*;
 use super::widgets::*;
@@ -25,7 +26,7 @@ pub struct Application {
 	world: World,
 	selected_point: i32,
 
-	forces: HashMap::<String, Rc::<Force>>,
+	forces: Rc::<RefCell::<HashMap::<String, Force>>>,
 	selected_force: String,
 
 	rl_handle: RaylibHandle,
@@ -55,7 +56,9 @@ impl Application {
 			world: World::new(),
 			selected_point: -1i32,
 
-			forces: HashMap::<String, Rc::<Force>>::new(),
+			forces: Rc::<RefCell::<HashMap::<String, Force>>>::new(
+				RefCell::new(HashMap::<String, Force>::new())
+			),
 			selected_force: String::new(),
 
 			rl_handle,
@@ -363,7 +366,7 @@ impl Application {
 			}
 		}
 
-		match self.forces.get(&name) {
+		match self.forces.borrow().get(&name) {
 			Some(f) => {
 				if let Some(ax) = self.force_menu.seek("set ax") {
 					if let WidgetVariant::TextInput {text, cursor, ..} = ax.get_variant() {
@@ -396,13 +399,21 @@ impl Application {
 		if contextual_activations.contains(&String::from("add point")) {
 			
 			// Adding point in world
-			let mut new_point = Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y));
+			let mut new_point = Point::new(
+				Vector2::new(
+					self.rl_handle.get_mouse_position().x,
+					self.rl_handle.get_mouse_position().y
+				),
+				Rc::clone(&self.forces)
+			);
 			new_point.set_trail_visibility(true);
-			for f in self.forces.iter() {
+			/*
+			for f in self.forces.borrow().iter() {
 				if let Err(e) = new_point.add_force(Rc::clone(&f.1)) {
 					println!("Error while adding force on newly created point : {e}.");
 				}
 			}
+			*/
 			self.world.push(new_point);
 
 			// Adding point handle in inspector
@@ -458,7 +469,7 @@ impl Application {
 				Tokenizer::tokenize(&self.force_menu.root.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
 			) {
 				(Ok(tx), Ok(ty)) => {
-					self.forces.insert(self.selected_force.clone(), Rc::new(Force {x:tx, y:ty}));
+					self.forces.borrow_mut().insert(self.selected_force.clone(), Force {x:tx, y:ty});
 					self.selected_force.clear();
 					self.force_menu.root.set_visible(false);
 				}
@@ -502,7 +513,7 @@ impl Application {
 							},
 							None => String::from("Unknown")
 						};
-						self.forces.insert(name.clone(), Rc::new(Force::new()));
+						self.forces.borrow_mut().insert(name.clone(), Force::new());
 						Self::add_button_to_scroll(s, |_: u32| name.clone());
 						self.force_naming.root.set_visible(false);
 					},
