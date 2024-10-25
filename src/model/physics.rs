@@ -2,6 +2,7 @@ use raylib::prelude::*;
 use std::collections::{HashMap, VecDeque};
 use common_macros::hash_map;
 use super::tokening::Token;
+use super::parsing::ParsingError;
 use super::parsing::Parser;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -106,6 +107,7 @@ impl  Point  {
 			new_acceleration += Vector2::new(
 				match Parser::parse(&force.1.x, &context) {
 					Ok(v) => v,
+					Err(ParsingError::EmptyTokenData) => 0f32,
 					Err(e) => {
 						println!("Error while summing x forces : {e:?}.");
 						0f32
@@ -113,6 +115,7 @@ impl  Point  {
 				},
 				match Parser::parse(&force.1.y, &context) {
 					Ok(v) => v,
+					Err(ParsingError::EmptyTokenData) => 0f32,
 					Err(e) => {
 						println!("Error while summing y forces : {e:?}.");
 						0f32
