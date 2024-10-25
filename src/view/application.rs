@@ -1,6 +1,7 @@
 //! Encapsule tout le code nécessaire au lancement et à la gestion de l'application.
 
 use std::collections::HashMap;
+use std::rc::Rc;
 use raylib::prelude::*;
 use super::super::model::physics::*;
 use super::widgets::*;
@@ -24,7 +25,7 @@ pub struct Application {
 	world: World,
 	selected_point: i32,
 
-	forces: HashMap::<String, Force>,
+	forces: HashMap::<String, Rc::<Force>>,
 	selected_force: String,
 
 	rl_handle: RaylibHandle,
@@ -54,7 +55,7 @@ impl Application {
 			world: World::new(),
 			selected_point: -1i32,
 
-			forces: HashMap::<String, Force>::new(),
+			forces: HashMap::<String, Rc::<Force>>::new(),
 			selected_force: String::new(),
 
 			rl_handle,
@@ -389,23 +390,19 @@ impl Application {
 		let contextual_activations = self.contextual_menu.root.get_all_activations();
 
 		if contextual_activations.contains(&String::from("add force")) {
-			self.forces.insert(
-				String::from("test"),
-				Force {
-					x: Vec::<Token>::new(),
-					y: Vec::<Token>::new()
-				}
-			);
-
 			self.force_naming.root.set_visible(true);
 			self.contextual_menu.root.set_visible(false);
-				
 		}
 		if contextual_activations.contains(&String::from("add point")) {
 			
 			// Adding point in world
 			let mut new_point = Point::new(Vector2::new(self.rl_handle.get_mouse_position().x, self.rl_handle.get_mouse_position().y));
 			new_point.set_trail_visibility(true);
+			for f in self.forces.iter() {
+				if let Err(e) = new_point.add_force(Rc::clone(&f.1)) {
+					println!("Error while adding force on newly created point : {e}.");
+				}
+			}
 			self.world.push(new_point);
 
 			// Adding point handle in inspector
@@ -461,7 +458,7 @@ impl Application {
 				Tokenizer::tokenize(&self.force_menu.root.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
 			) {
 				(Ok(tx), Ok(ty)) => {
-					self.forces.insert(self.selected_force.clone(), Force {x:tx, y:ty});
+					self.forces.insert(self.selected_force.clone(), Rc::new(Force {x:tx, y:ty}));
 					self.selected_force.clear();
 					self.force_menu.root.set_visible(false);
 				}
@@ -477,7 +474,6 @@ impl Application {
 			!self.force_menu_just_appeared
 		{
 			self.force_menu.root.set_visible(false);
-			self.selected_point = -1i32;
 		} else {
 			self.force_menu_just_appeared = false;
 		}
@@ -492,11 +488,21 @@ impl Application {
 			} else if id == "create" {
 				match self.force_inspector.seek("force scroll") {
 					Some (s) => {
-						let name = match self.force_naming.get_entry("name") {
-							Some(n) => n,
+						let name = match self.force_naming.seek("name") {
+							Some(n) => {
+								if let WidgetVariant::TextInput{text, cursor, ..} = n.get_variant() {
+									let t = text.clone();
+									text.clear();
+									*cursor = 0u32;
+									t
+								} else {
+									println!("Error: Widget of ID 'name' is not a TextInput.");
+									String::from("Unknown")
+								}
+							},
 							None => String::from("Unknown")
 						};
-						self.forces.insert(name.clone(), Force::new());
+						self.forces.insert(name.clone(), Rc::new(Force::new()));
 						Self::add_button_to_scroll(s, |_: u32| name.clone());
 						self.force_naming.root.set_visible(false);
 					},
