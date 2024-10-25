@@ -203,11 +203,11 @@ impl Application {
 				Layout::new(Vector2::new(0f32, 0.3f32), Vector2::new(0.4f32, 0.2f32)),
 				WidgetVariant::Button {state: ButtonState::Rest}
 			).style(Style::default())
-			.id("apply forces".to_string())
+			.id("apply".to_string())
 			.add_child(
 				Widget::new(
 					Layout::new(Vector2::new(0f32, 0f32), Vector2::new(0.9f32, 0.9f32)),
-					WidgetVariant::Label {text: "Apply force !".to_string(), font_size: 16i32}
+					WidgetVariant::Label {text: "Apply !".to_string(), font_size: 16i32}
 				).style(Style::default().background(Color::new(0, 0, 0, 0)))
 			)
 		)
@@ -358,15 +358,22 @@ impl Application {
 		if let Some(title) = self.force_menu.seek("title") {
 			if let WidgetVariant::Label {text, ..} = title.get_variant() {
 				*text = name.clone();
+				self.selected_force = name.clone();
 			}
 		}
 
 		match self.forces.get(&name) {
 			Some(f) => {
 				if let Some(ax) = self.force_menu.seek("set ax") {
-					if let WidgetVariant::TextInput {text, ..} = ax.get_variant() {
+					if let WidgetVariant::TextInput {text, cursor, ..} = ax.get_variant() {
 						*text = Tokenizer::untokenize(&f.x);
-						println!("{text}");
+						*cursor = text.len() as u32;
+					}
+				}
+				if let Some(ay) = self.force_menu.seek("set ay") {
+					if let WidgetVariant::TextInput {text, cursor, ..} = ay.get_variant() {
+						*text = Tokenizer::untokenize(&f.y);
+						*cursor = text.len() as u32;
 					}
 				}
 			},
@@ -448,18 +455,15 @@ impl Application {
 
 		let force_menu_activations = self.force_menu.root.get_all_activations();
 
-		if force_menu_activations.contains(&"apply forces".to_string()) {
+		if force_menu_activations.contains(&"apply".to_string()) {
 			match (
 				Tokenizer::tokenize(&self.force_menu.root.get_entry_in_tree("set ax").unwrap_or("0".to_string())),
 				Tokenizer::tokenize(&self.force_menu.root.get_entry_in_tree("set ay").unwrap_or("0".to_string()))
 			) {
 				(Ok(tx), Ok(ty)) => {
-					match self.world.get_mut(self.selected_point as usize) {
-						Some(point) => {
-							// TODO: ADD FORCE
-						},
-						None => println!("Error : Trying to set forces of point {} which doesn't exist.", self.selected_point)
-					}
+					self.forces.insert(self.selected_force.clone(), Force {x:tx, y:ty});
+					self.selected_force.clear();
+					self.force_menu.root.set_visible(false);
 				}
 				(Err(e), _) => println!("Error on X expression : {e:?}"),
 				(_, Err(e)) => println!("Error on Y expression : {e:?}")
