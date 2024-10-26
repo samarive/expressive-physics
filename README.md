@@ -31,15 +31,9 @@ its documentation.
 		1. Smooth left-right :
 			* x = (400 - px)/100
 			* y = 0
-		1. Fly simulation :
-			* x = (400 - px)/100
-			* y = (225 - py)/200
-		1. Boiiiing :
-			* x = (400 - px) - 0.01 * vx
-			* y = 0
-		1. Rocket launch :
-			* x = vy + 1
-			* y = vx - 1.0000001
+		1. Ground collision :
+			* x = 0
+			* y = (py>400) * (-2 * vy)
 
 # Screenshots
 
@@ -52,22 +46,11 @@ its documentation.
 
 * UI
 	1. Stop input fields from overflowing when the user types a long string
-	1. Add a cursor to input fields
 	1. Show errors on window rather than in console
-	1. Show the list of points at the left of the screen
-		* make it scrollable.
-		* make it prompt for a force in the force list when a point is clicked
-	1. Show the list of forces at the right of the screen
-		* make it scrollable
-		* make it editable
+	1. Stop scroll menu from overflowing
 	1. Add options in contextual menu (right click in-app)
-* Simulation
-	1. Change relation between Point and Force
-		* a Point should only have immutables pointers to forces it is submited to
-	1. Change World from Vec::< Point > to its very own type and let it handle simulations etm
 * Expressivity
-	1. Make expressions accept negative values rather than having to substract to zero.
-	1. Make expressions accept trigonometrics functions, exponentials, sqrt, powers etc...
+	1. Make expressions accept trigonometrics functions, absolute, exponentials, sqrt, powers etc...
 * Code quality
 	1. Document and clean up every last bit of code !
 
