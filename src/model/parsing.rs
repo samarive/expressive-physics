@@ -111,8 +111,12 @@ impl Parser {
 						Token::Parenthesis(true) => {
 							return Ok(0f32);
 						},
+						Token::Parenthesis(false) => {
+							// Have Parenthesis [Value | Variable] Parenthesis
+							&tokens[start + 1]
+						},
 						_ => {
-							println!("Should never happen 2, remove this block after rigorous testing.");
+							println!("Should never happen 2... Delete after rigorous testing.");
 							return Err(ParsingError::NotAValue);
 						}
 					}
